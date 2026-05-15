@@ -4,7 +4,8 @@
 -- Modificabile solo via service_role (non da client).
 -- ============================================================
 
--- Helper: legge il flag is_admin dal JWT
+-- Helper: legge il flag is_admin direttamente da auth.users
+-- (non dal JWT, così non serve re-login dopo una promozione)
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -13,7 +14,9 @@ security definer
 set search_path = public
 as $$
   select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'is_admin')::boolean,
+    (select (raw_app_meta_data ->> 'is_admin')::boolean
+     from auth.users
+     where id = auth.uid()),
     false
   );
 $$;
