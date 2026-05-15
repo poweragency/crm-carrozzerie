@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className="font-sans antialiased">
-        {children}
+        <ConfirmProvider>{children}</ConfirmProvider>
         <Toaster
           position="bottom-right"
           theme="dark"

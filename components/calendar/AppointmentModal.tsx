@@ -5,6 +5,7 @@ import { X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { appointmentFormSchema, type AppointmentFormValues } from "@/lib/schemas";
+import { useConfirm } from "../ConfirmDialog";
 import type { Appointment, AppointmentKind, Customer, Case } from "@/types/database.types";
 
 const KIND_LABELS: Record<AppointmentKind, string> = {
@@ -42,6 +43,7 @@ export function AppointmentModal({
   onDeleted,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const confirm = useConfirm();
 
   const [title, setTitle] = useState(appointment?.title ?? "");
   const [kind, setKind] = useState<AppointmentKind>(appointment?.kind ?? "accettazione");
@@ -115,7 +117,13 @@ export function AppointmentModal({
 
   async function handleDelete() {
     if (!appointment) return;
-    if (!confirm("Eliminare l'appuntamento?")) return;
+    const ok = await confirm({
+      title: "Eliminare l'appuntamento?",
+      description: appointment.title,
+      confirmLabel: "Elimina",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("appointments").delete().eq("id", appointment.id);
     if (error) {
       toast.error("Eliminazione fallita", { description: error.message });

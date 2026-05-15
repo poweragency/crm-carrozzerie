@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, cn } from "@/lib/utils";
 import { invoiceFormSchema, type InvoiceFormValues } from "@/lib/schemas";
 import { InvoicePDF } from "./InvoicePDF";
+import { useConfirm } from "../ConfirmDialog";
 import type {
   Invoice,
   InvoiceItem,
@@ -92,6 +93,7 @@ export function InvoiceEditor({
 }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const confirm = useConfirm();
 
   const [kind, setKind] = useState<InvoiceKind>(invoice.kind);
   const [status, setStatus] = useState<InvoiceStatus>(invoice.status);
@@ -219,14 +221,15 @@ export function InvoiceEditor({
     const itemCount = items.length;
     const itemDetail =
       itemCount > 0
-        ? `\n\nContiene ${itemCount} ${itemCount === 1 ? "riga" : "righe"} per un totale di ${formatCurrency(computed.total)}.`
+        ? `Contiene ${itemCount} ${itemCount === 1 ? "riga" : "righe"} per un totale di ${formatCurrency(computed.total)}.\n\n`
         : "";
-    if (
-      !confirm(
-        `Eliminare definitivamente ${KIND_LABELS[kind].toLowerCase()} N. ${invoice.number}?${itemDetail}\n\nAzione irreversibile.`
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Eliminare ${KIND_LABELS[kind].toLowerCase()} N. ${invoice.number}?`,
+      description: `${itemDetail}Azione irreversibile.`,
+      confirmLabel: "Elimina",
+      variant: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase.from("invoices").delete().eq("id", invoice.id);
     if (error) {
       toast.error("Eliminazione fallita", { description: error.message });

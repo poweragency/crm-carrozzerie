@@ -8,6 +8,7 @@ import { LEAD_STATUS_LABELS, LEAD_STATUS_ORDER } from "@/lib/constants";
 import { leadFormSchema, type LeadFormValues } from "@/lib/schemas";
 import type { Lead, Note } from "@/types/database.types";
 import { formatDateTime } from "@/lib/utils";
+import { useConfirm } from "./ConfirmDialog";
 
 interface Props {
   lead: Lead | null;
@@ -17,6 +18,7 @@ interface Props {
 
 export function LeadModal({ lead, onClose, onSaved }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const confirm = useConfirm();
   const [form, setForm] = useState<LeadFormValues>({
     full_name: lead?.full_name ?? "",
     phone: lead?.phone ?? null,
@@ -30,9 +32,16 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
   const [errors, setErrors] = useState<Partial<Record<keyof LeadFormValues, string>>>({});
   const [dirty, setDirty] = useState(false);
 
-  function attemptClose() {
-    if (dirty && !confirm("Ci sono modifiche non salvate. Chiudere comunque?")) {
-      return;
+  async function attemptClose() {
+    if (dirty) {
+      const ok = await confirm({
+        title: "Chiudere senza salvare?",
+        description: "Le modifiche fatte verranno perse.",
+        confirmLabel: "Chiudi senza salvare",
+        cancelLabel: "Resta",
+        variant: "danger",
+      });
+      if (!ok) return;
     }
     onClose();
   }
@@ -154,12 +163,13 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
         ? `\n\nVerranno eliminati anche: ${parts.join(", ")}.`
         : "";
 
-    if (
-      !confirm(
-        `Eliminare definitivamente il lead "${lead.full_name}"?${detail}\n\nAzione irreversibile.`
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Eliminare il lead "${lead.full_name}"?`,
+      description: `${detail.replace(/^\n\n/, "")}\n\nAzione irreversibile.`.trim(),
+      confirmLabel: "Elimina",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     const { error } = await supabase.from("leads").delete().eq("id", lead.id);
     if (error) {

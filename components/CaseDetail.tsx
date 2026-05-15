@@ -24,6 +24,7 @@ import { DocumentPanel } from "./case/DocumentPanel";
 import { NotesPanel } from "./case/NotesPanel";
 import { InvoicesPanel } from "./case/InvoicesPanel";
 import { NotifyButton } from "./case/NotifyButton";
+import { useConfirm } from "./ConfirmDialog";
 import type {
   Case,
   CaseStatus,
@@ -83,6 +84,7 @@ export function CaseDetail({
 }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const confirm = useConfirm();
 
   const [caseData, setCaseData] = useState(initialCase);
   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
@@ -260,13 +262,16 @@ export function CaseDetail({
 
     const detail =
       parts.length > 0
-        ? `\n\nVerranno eliminati anche: ${parts.join(", ")}.`
+        ? `Verranno eliminati anche: ${parts.join(", ")}.\n\n`
         : "";
-    const confirmed = confirm(
-      `Eliminare definitivamente la pratica di ${
+    const confirmed = await confirm({
+      title: `Eliminare la pratica di ${
         customerForm.full_name || "questo cliente"
-      }?${detail}\n\nAzione irreversibile.`
-    );
+      }?`,
+      description: `${detail}Azione irreversibile.`,
+      confirmLabel: "Elimina pratica",
+      variant: "danger",
+    });
     if (!confirmed) return;
     const { error } = await supabase.from("cases").delete().eq("id", caseData.id);
     if (error) {

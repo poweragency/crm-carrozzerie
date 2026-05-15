@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatDateTime, cn } from "@/lib/utils";
 import { compressImage } from "@/lib/image";
 import { PhotoGallery } from "./PhotoGallery";
+import { useConfirm } from "../ConfirmDialog";
 import type { Document } from "@/types/database.types";
 
 interface Props {
@@ -21,6 +22,7 @@ function isImage(d: Document): boolean {
 
 export function DocumentPanel({ caseId, documents, onChange }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -94,8 +96,13 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
   }
 
   async function handleDelete(doc: Document) {
-    const confirmed = confirm(`Eliminare "${doc.file_name}"?`);
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Eliminare il file?",
+      description: doc.file_name,
+      confirmLabel: "Elimina",
+      variant: "danger",
+    });
+    if (!ok) return;
     await supabase.storage.from("documents").remove([doc.file_path]);
     const { error } = await supabase.from("documents").delete().eq("id", doc.id);
     if (error) {
