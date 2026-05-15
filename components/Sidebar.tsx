@@ -12,10 +12,11 @@ import {
   Settings,
   Calendar,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const nav = [
+const baseNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leads", label: "Lead", icon: KanbanSquare },
   { href: "/cases", label: "Pratiche", icon: FolderKanban },
@@ -26,11 +27,15 @@ const nav = [
 interface Props {
   userEmail: string;
   workshopName: string;
+  isAdmin: boolean;
   open: boolean;
   onClose: () => void;
 }
 
-export function Sidebar({ userEmail, workshopName, open, onClose }: Props) {
+export function Sidebar({ userEmail, workshopName, isAdmin, open, onClose }: Props) {
+  const nav = isAdmin
+    ? [...baseNav, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+    : baseNav;
   const pathname = usePathname();
 
   useEffect(() => {

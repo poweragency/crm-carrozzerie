@@ -7,10 +7,11 @@ import { Sidebar } from "./Sidebar";
 interface Props {
   userEmail: string;
   workshopName: string;
+  isAdmin: boolean;
   children: React.ReactNode;
 }
 
-export function AppShell({ userEmail, workshopName, children }: Props) {
+export function AppShell({ userEmail, workshopName, isAdmin, children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -18,6 +19,7 @@ export function AppShell({ userEmail, workshopName, children }: Props) {
       <Sidebar
         userEmail={userEmail}
         workshopName={workshopName}
+        isAdmin={isAdmin}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

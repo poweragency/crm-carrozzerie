@@ -577,6 +577,36 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      admin_get_workshops: {
+        Args: Record<string, never>
+        Returns: Array<{
+          id: string
+          email: string
+          workshop_name: string | null
+          phone: string | null
+          vat_number: string | null
+          tax_code: string | null
+          address: string | null
+          city: string | null
+          postal_code: string | null
+          province: string | null
+          facebook_connected: boolean
+          registered_at: string
+          last_sign_in_at: string | null
+          banned_until: string | null
+          email_confirmed: boolean
+          leads_count: number
+          cases_count: number
+          cases_open_count: number
+          revenue_total: number
+          invoices_count: number
+          documents_count: number
+        }>
+      }
     }
     Enums: {
       appointment_kind:

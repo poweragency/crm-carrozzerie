@@ -20,10 +20,13 @@ export default async function AppLayout({
     .eq("id", user.id)
     .single();
 
+  const isAdmin = user.app_metadata?.is_admin === true;
+
   return (
     <AppShell
       userEmail={user.email ?? ""}
       workshopName={profile?.workshop_name ?? "La mia carrozzeria"}
+      isAdmin={isAdmin}
     >
       {children}
     </AppShell>
