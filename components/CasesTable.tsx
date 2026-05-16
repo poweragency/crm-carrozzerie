@@ -462,27 +462,40 @@ function NewCaseModal({
     });
   }
 
+  const collator = useMemo(
+    () => new Intl.Collator("it", { sensitivity: "base", numeric: true }),
+    []
+  );
+
   const customerOptions = useMemo(
     () =>
-      customers.map((c) => ({
-        value: c.id,
-        label: c.full_name,
-        subLabel: [c.phone, c.email].filter(Boolean).join(" · ") || undefined,
-      })),
-    [customers]
+      [...customers]
+        .sort((a, b) => collator.compare(a.full_name, b.full_name))
+        .map((c) => ({
+          value: c.id,
+          label: c.full_name,
+          subLabel: [c.phone, c.email].filter(Boolean).join(" · ") || undefined,
+        })),
+    [customers, collator]
   );
 
   const vehicleOptions = useMemo(
     () =>
-      filteredVehicles.map((v) => ({
-        value: v.id,
-        label: [v.make, v.model].filter(Boolean).join(" ") || "Veicolo senza marca",
-        subLabel:
-          [v.plate, v.year ? String(v.year) : null, v.color]
-            .filter(Boolean)
-            .join(" · ") || undefined,
-      })),
-    [filteredVehicles]
+      [...filteredVehicles]
+        .sort((a, b) => {
+          const la = [a.make, a.model].filter(Boolean).join(" ") || a.plate || "";
+          const lb = [b.make, b.model].filter(Boolean).join(" ") || b.plate || "";
+          return collator.compare(la, lb);
+        })
+        .map((v) => ({
+          value: v.id,
+          label: [v.make, v.model].filter(Boolean).join(" ") || "Veicolo senza marca",
+          subLabel:
+            [v.plate, v.year ? String(v.year) : null, v.color]
+              .filter(Boolean)
+              .join(" · ") || undefined,
+        })),
+    [filteredVehicles, collator]
   );
 
   async function handleSave() {

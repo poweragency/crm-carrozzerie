@@ -175,7 +175,7 @@ export function Combobox({
             </button>
           )}
 
-          {searchable && options.length > 6 && (
+          {searchable && options.length > 0 && (
             <div className="px-2 py-2 border-b border-border">
               <div className="relative">
                 <Search
@@ -188,7 +188,7 @@ export function Combobox({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Cerca..."
+                  placeholder="Cerca per nome, telefono, targa..."
                   className="w-full bg-bg-input border border-border rounded-md pl-7 pr-2 h-8 text-sm placeholder:text-text-subtle focus:outline-none focus:border-accent"
                 />
               </div>
