@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireAdmin, adminClient } from "@/lib/admin";
+import { requireAdmin, adminClient, logAdminAction } from "@/lib/admin";
 
 /**
  * POST /api/admin/users
@@ -40,6 +40,11 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await logAdminAction(auth.userId, "create_workshop", data.user?.id, {
+    email: body.email,
+    workshop_name: body.workshop_name,
+  });
 
   // Il trigger handle_new_user crea già il profile con workshop_name dal metadata.
   return NextResponse.json({ id: data.user?.id, email: data.user?.email });

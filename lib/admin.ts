@@ -22,3 +22,26 @@ export async function requireAdmin(): Promise<{ userId: string } | NextResponse>
 export function adminClient() {
   return createAdminClient();
 }
+
+/**
+ * Logga un'azione admin nel registro `admin_audit_log`.
+ * Errori di logging vengono ingoiati (best-effort) per non bloccare le azioni.
+ */
+export async function logAdminAction(
+  adminId: string,
+  action: string,
+  targetUserId?: string | null,
+  details?: Record<string, unknown>
+): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    await admin.from("admin_audit_log").insert({
+      admin_id: adminId,
+      action,
+      target_user_id: targetUserId ?? null,
+      details: (details ?? null) as never,
+    });
+  } catch (err) {
+    console.error("[admin-audit] log failed:", err);
+  }
+}

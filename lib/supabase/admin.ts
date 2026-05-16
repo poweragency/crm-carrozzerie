@@ -7,6 +7,12 @@ import type { Database } from "@/types/database.types";
  * NON usare mai questo lato client.
  */
 export function createAdminClient() {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "createAdminClient può essere chiamato solo lato server. " +
+        "Se ne vedi questo errore lato client, c'è un import errato."
+    );
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   if (!key) {

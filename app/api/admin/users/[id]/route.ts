@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireAdmin, adminClient } from "@/lib/admin";
+import { requireAdmin, adminClient, logAdminAction } from "@/lib/admin";
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -28,6 +28,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  await logAdminAction(auth.userId, "delete_workshop", id);
   return NextResponse.json({ ok: true });
 }
 
@@ -64,5 +65,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  await logAdminAction(
+    auth.userId,
+    body.action === "disable" ? "disable_workshop" : "enable_workshop",
+    id
+  );
   return NextResponse.json({ ok: true });
 }
