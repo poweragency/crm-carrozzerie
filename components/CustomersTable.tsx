@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Phone, Mail, Car, FolderKanban, Users } from "lucide-react";
+import { Search, Phone, Mail, Car, FolderKanban, Users, Plus } from "lucide-react";
 import { cn, formatCurrency, formatDate, initials } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CustomerFormModal } from "@/components/customer/CustomerFormModal";
 import type { CustomerRow } from "@/app/(app)/customers/page";
 
 const AVATAR_COLORS = [
@@ -18,6 +19,7 @@ const AVATAR_COLORS = [
 export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [showNew, setShowNew] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,6 +55,10 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
               className="input-base pl-8 w-72"
             />
           </div>
+          <button type="button" onClick={() => setShowNew(true)} className="btn-primary">
+            <Plus className="w-4 h-4" strokeWidth={2.5} />
+            Nuovo cliente
+          </button>
         </div>
       </div>
 
@@ -185,6 +191,16 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
           </div>
         )}
       </div>
+
+      {showNew && (
+        <CustomerFormModal
+          onClose={() => setShowNew(false)}
+          onSaved={(c) => {
+            setShowNew(false);
+            router.push(`/customers/${c.id}`);
+          }}
+        />
+      )}
     </div>
   );
 }
