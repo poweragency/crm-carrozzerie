@@ -34,6 +34,7 @@ function timeAgo(iso: string): string {
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}g fa`;
   return new Date(iso).toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   });

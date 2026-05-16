@@ -170,6 +170,7 @@ function fmtEUR(n: number): string {
 
 function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -191,9 +192,7 @@ export function InvoicePDF(props: InvoicePDFProps) {
             )}
             <View style={styles.brandText}>
               <Text style={styles.brandName}>{workshop.name}</Text>
-              {workshop.address && (
-                <Text style={styles.small}>{workshop.address}</Text>
-              )}
+              {workshop.address && <Text style={styles.small}>{workshop.address}</Text>}
               {(workshop.postalCode || workshop.city || workshop.province) && (
                 <Text style={styles.small}>
                   {[workshop.postalCode, workshop.city, workshop.province]

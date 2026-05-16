@@ -4,7 +4,13 @@ import {
   CASE_STATUS_LABELS,
   LEAD_STATUS_LABELS,
 } from "@/lib/constants";
-import { formatCurrency, formatDateTime, initials, todayBoundsInRome } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatTime,
+  initials,
+  todayBoundsInRome,
+} from "@/lib/utils";
 import {
   KanbanSquare,
   Users,
@@ -313,10 +319,7 @@ export default async function DashboardPage() {
                 className="px-5 py-2.5 hover:bg-bg-hover transition-colors flex items-center gap-3"
               >
                 <div className="text-sm font-medium tabular-nums text-accent w-14">
-                  {new Date(a.starts_at).toLocaleTimeString("it-IT", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatTime(a.starts_at)}
                 </div>
                 <div className="text-sm flex-1 truncate">{a.title}</div>
                 <div className="text-[10px] uppercase text-text-subtle">{a.kind}</div>

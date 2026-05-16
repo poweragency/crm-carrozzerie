@@ -36,7 +36,11 @@ export function RevenueChart({ data }: Props) {
   const dateAt = (daysAgo: number) => {
     const d = new Date(now);
     d.setDate(now.getDate() - daysAgo);
-    return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+    return d.toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
+      day: "2-digit",
+      month: "short",
+    });
   };
 
   return (
@@ -121,21 +125,15 @@ export function RevenueChart({ data }: Props) {
       <div className="grid grid-cols-3 gap-2 mt-3 text-center">
         <div>
           <div className="text-[10px] uppercase text-text-subtle">Oggi</div>
-          <div className="text-xs font-medium tabular-nums">
-            {formatCurrency(today)}
-          </div>
+          <div className="text-xs font-medium tabular-nums">{formatCurrency(today)}</div>
         </div>
         <div>
           <div className="text-[10px] uppercase text-text-subtle">Media/giorno</div>
-          <div className="text-xs font-medium tabular-nums">
-            {formatCurrency(avg)}
-          </div>
+          <div className="text-xs font-medium tabular-nums">{formatCurrency(avg)}</div>
         </div>
         <div>
           <div className="text-[10px] uppercase text-text-subtle">Picco</div>
-          <div className="text-xs font-medium tabular-nums">
-            {formatCurrency(max)}
-          </div>
+          <div className="text-xs font-medium tabular-nums">{formatCurrency(max)}</div>
         </div>
       </div>
     </div>

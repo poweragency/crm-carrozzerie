@@ -5,9 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Tutti i format usano Europe/Rome: su Vercel (runtime UTC) le date
+// venivano mostrate -2h rispetto all'ora italiana (es. 9:00 → 7:00).
+const ROME_TZ = "Europe/Rome";
+
 export function formatDate(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("it-IT", {
+    timeZone: ROME_TZ,
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -17,8 +22,18 @@ export function formatDate(date: string | Date): string {
 export function formatDateTime(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleString("it-IT", {
+    timeZone: ROME_TZ,
     day: "2-digit",
     month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatTime(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleTimeString("it-IT", {
+    timeZone: ROME_TZ,
     hour: "2-digit",
     minute: "2-digit",
   });

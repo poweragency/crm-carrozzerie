@@ -21,7 +21,7 @@ import {
   CornerDownLeft,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 type Group = "Pratiche" | "Lead" | "Clienti" | "Veicoli" | "Appuntamenti";
 
@@ -194,12 +194,7 @@ function CommandPalette({
           id: `app-${a.id}`,
           group: "Appuntamenti",
           label: a.title,
-          subLabel: new Date(a.starts_at).toLocaleString("it-IT", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          subLabel: formatDateTime(a.starts_at),
           href: a.case_id ? `/cases/${a.case_id}` : "/calendar",
           icon: CalendarClock,
         });
