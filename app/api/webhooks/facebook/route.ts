@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * Facebook Lead Ads webhook (multi-tenant).
@@ -44,6 +45,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = rateLimit(`fb-webhook:${ip}`, { windowMs: 60_000, max: 60 });
+  if (!rl.ok) {
+    return new NextResponse("Rate limit", {
+      status: 429,
+      headers: { "Retry-After": String(rl.retryAfterSec) },
+    });
+  }
   const rawBody = await req.text();
 
   // Verifica firma (X-Hub-Signature-256) — globale, App Secret unico

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CASE_STATUS_LABELS } from "@/lib/constants";
 import type { CaseStatus } from "@/types/database.types";
+import { rateLimit } from "@/lib/rate-limit";
 
 const STATUS_MESSAGES: Record<CaseStatus, string> = {
   preventivo:
@@ -22,6 +23,15 @@ export async function POST(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  // 10 email/min per utente per evitare spam o abuse della tab Notifica
+  const rl = rateLimit(`notify-status:${user.id}`, { windowMs: 60_000, max: 10 });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { sent: false, error: "Troppe richieste, riprova tra qualche istante" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
 
   const body = (await req.json().catch(() => null)) as { case_id?: string } | null;
   if (!body?.case_id) return new NextResponse("Missing case_id", { status: 400 });
