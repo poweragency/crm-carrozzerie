@@ -514,8 +514,10 @@ export type Database = {
           phone: string | null;
           postal_code: string | null;
           province: string | null;
+          role: Database["public"]["Enums"]["user_role"];
           tax_code: string | null;
           vat_number: string | null;
+          workshop_id: string;
           workshop_name: string | null;
         };
         Insert: {
@@ -535,8 +537,10 @@ export type Database = {
           phone?: string | null;
           postal_code?: string | null;
           province?: string | null;
+          role?: Database["public"]["Enums"]["user_role"];
           tax_code?: string | null;
           vat_number?: string | null;
+          workshop_id: string;
           workshop_name?: string | null;
         };
         Update: {
@@ -556,8 +560,10 @@ export type Database = {
           phone?: string | null;
           postal_code?: string | null;
           province?: string | null;
+          role?: Database["public"]["Enums"]["user_role"];
           tax_code?: string | null;
           vat_number?: string | null;
+          workshop_id?: string;
           workshop_name?: string | null;
         };
         Relationships: [
@@ -568,7 +574,74 @@ export type Database = {
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "profiles_workshop_fk";
+            columns: ["workshop_id"];
+            isOneToOne: false;
+            referencedRelation: "workshops";
+            referencedColumns: ["id"];
+          },
         ];
+      };
+      workshops: {
+        Row: {
+          address: string | null;
+          city: string | null;
+          country: string | null;
+          created_at: string;
+          fb_page_access_token: string | null;
+          fb_page_id: string | null;
+          fb_verify_token: string | null;
+          iban: string | null;
+          id: string;
+          logo_url: string | null;
+          name: string;
+          phone: string | null;
+          postal_code: string | null;
+          province: string | null;
+          tax_code: string | null;
+          updated_at: string;
+          vat_number: string | null;
+        };
+        Insert: {
+          address?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          fb_page_access_token?: string | null;
+          fb_page_id?: string | null;
+          fb_verify_token?: string | null;
+          iban?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          phone?: string | null;
+          postal_code?: string | null;
+          province?: string | null;
+          tax_code?: string | null;
+          updated_at?: string;
+          vat_number?: string | null;
+        };
+        Update: {
+          address?: string | null;
+          city?: string | null;
+          country?: string | null;
+          created_at?: string;
+          fb_page_access_token?: string | null;
+          fb_page_id?: string | null;
+          fb_verify_token?: string | null;
+          iban?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          name?: string;
+          phone?: string | null;
+          postal_code?: string | null;
+          province?: string | null;
+          tax_code?: string | null;
+          updated_at?: string;
+          vat_number?: string | null;
+        };
+        Relationships: [];
       };
       vehicles: {
         Row: {
@@ -652,6 +725,14 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      is_owner: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+      current_workshop_id: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       admin_get_workshops: {
         Args: Record<string, never>;
         Returns: Array<{
@@ -707,6 +788,7 @@ export type Database = {
         | "case_status_change"
         | "invoice_paid"
         | "system";
+      user_role: "owner" | "staff";
     };
     CompositeTypes: { [_ in never]: never };
   };
@@ -729,6 +811,12 @@ export type Document = Database["public"]["Tables"]["documents"]["Row"];
 export type Note = Database["public"]["Tables"]["notes"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
+
+export type Workshop = Database["public"]["Tables"]["workshops"]["Row"];
+export type WorkshopInsert = Database["public"]["Tables"]["workshops"]["Insert"];
+export type WorkshopUpdate = Database["public"]["Tables"]["workshops"]["Update"];
+
+export type UserRole = Database["public"]["Enums"]["user_role"];
 
 export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 export type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
