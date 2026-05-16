@@ -57,11 +57,9 @@ export function Combobox({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter(
-      (o) =>
-        o.label.toLowerCase().includes(q) ||
-        (o.subLabel?.toLowerCase().includes(q) ?? false)
-    );
+    // Filtra solo per label (nome cliente / marca+modello veicolo).
+    // Il subLabel (email, telefono) viene mostrato ma non indicizzato.
+    return options.filter((o) => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
   useEffect(() => {
@@ -188,7 +186,7 @@ export function Combobox({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Cerca per nome, telefono, targa..."
+                  placeholder="Cerca..."
                   className="w-full bg-bg-input border border-border rounded-md pl-7 pr-2 h-8 text-sm placeholder:text-text-subtle focus:outline-none focus:border-accent"
                 />
               </div>
