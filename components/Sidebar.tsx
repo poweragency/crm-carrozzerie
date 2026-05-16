@@ -86,11 +86,7 @@ export function Sidebar({
           <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center shrink-0 overflow-hidden">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+              <img src={logoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
               <Wrench className="w-4 h-4 text-accent-contrast" strokeWidth={2.5} />
             )}
@@ -121,16 +117,12 @@ export function Sidebar({
           >
             <Search className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
             <span className="flex-1 text-left">Cerca...</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 bg-bg-card border border-border rounded">
-              ⌘K
-            </kbd>
           </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto flex flex-col">
           {baseNav.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
               <Link
@@ -176,10 +168,7 @@ export function Sidebar({
               <div className="text-[10px] uppercase tracking-wide text-text-subtle">
                 Account
               </div>
-              <div
-                className="text-xs text-text-muted truncate"
-                title={userEmail}
-              >
+              <div className="text-xs text-text-muted truncate" title={userEmail}>
                 {userEmail}
               </div>
             </div>
