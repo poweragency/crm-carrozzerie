@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   X,
-  Ban,
-  CheckCircle,
   Trash2,
   Mail,
   Phone,
@@ -14,14 +12,25 @@ import {
   ImageIcon,
   Euro,
   Facebook,
+  Users as UsersIcon,
   ShieldCheck,
+  User,
+  Loader2,
 } from "lucide-react";
 import { cn, formatCurrency, formatDateTime, initials } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import type { Workshop } from "./WorkshopTable";
+import type { UserRole } from "@/types/database.types";
 
-function isDisabled(w: Workshop): boolean {
-  if (!w.banned_until) return false;
-  return new Date(w.banned_until).getTime() > Date.now();
+interface Member {
+  id: string;
+  full_name: string | null;
+  email: string;
+  role: UserRole;
+  created_at: string;
+  last_sign_in_at: string | null;
+  banned_until: string | null;
+  email_confirmed: boolean;
 }
 
 interface Props {
@@ -29,16 +38,12 @@ interface Props {
   isCurrent: boolean;
   onClose: () => void;
   onDelete: () => void;
-  onToggleBan: () => void;
 }
 
-export function WorkshopDrawer({
-  workshop: w,
-  isCurrent,
-  onClose,
-  onDelete,
-  onToggleBan,
-}: Props) {
+export function WorkshopDrawer({ workshop: w, isCurrent, onClose, onDelete }: Props) {
+  const [members, setMembers] = useState<Member[] | null>(null);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -47,7 +52,21 @@ export function WorkshopDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const disabled = isDisabled(w);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("admin_get_workshop_members", {
+        p_workshop_id: w.id,
+      });
+      if (cancelled) return;
+      if (!error && data) setMembers(data as Member[]);
+      setLoadingMembers(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [w.id]);
 
   return (
     <>
@@ -56,22 +75,24 @@ export function WorkshopDrawer({
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className="fixed top-0 right-0 h-screen w-full sm:w-[420px] bg-bg-card border-l border-border z-50 flex flex-col shadow-xl animate-slide-in-right">
+      <aside className="fixed top-0 right-0 h-screen w-full sm:w-[460px] bg-bg-card border-l border-border z-50 flex flex-col shadow-xl animate-slide-in-right">
         <div className="px-5 h-16 flex items-center justify-between border-b border-border shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-full bg-accent/15 text-accent text-[11px] font-semibold flex items-center justify-center shrink-0">
-              {initials(w.workshop_name ?? w.email)}
+              {initials(w.name)}
             </div>
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate flex items-center gap-1.5">
-                {w.workshop_name ?? "—"}
+                {w.name}
                 {isCurrent && (
                   <span className="text-[9px] bg-accent/20 text-accent px-1 py-0.5 rounded font-bold">
                     TU
                   </span>
                 )}
               </div>
-              <div className="text-[11px] text-text-subtle truncate">{w.email}</div>
+              <div className="text-[11px] text-text-subtle truncate">
+                {w.owner_email ?? "—"}
+              </div>
             </div>
           </div>
           <button
@@ -85,42 +106,24 @@ export function WorkshopDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* Stato */}
-          <div>
-            {disabled ? (
-              <div className="card p-3 border-red-500/30 bg-red-500/5 flex items-center gap-2 text-red-400 text-sm">
-                <Ban className="w-4 h-4 shrink-0" />
-                <span>Account disabilitato — non può loggarsi</span>
-              </div>
-            ) : w.email_confirmed ? (
-              <div className="card p-3 border-emerald-500/30 bg-emerald-500/5 flex items-center gap-2 text-emerald-400 text-sm">
-                <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>Account attivo</span>
-              </div>
-            ) : (
-              <div className="card p-3 border-yellow-500/30 bg-yellow-500/5 flex items-center gap-2 text-yellow-400 text-sm">
-                <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>Email non confermata</span>
-              </div>
-            )}
-          </div>
-
           {/* Dati registrazione */}
           <Section title="Dati registrazione">
-            <Row icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={w.email} />
-            {w.phone && (
+            {w.owner_email && (
+              <Row
+                icon={<Mail className="w-3.5 h-3.5" />}
+                label="Email titolare"
+                value={w.owner_email}
+              />
+            )}
+            {w.owner_phone && (
               <Row
                 icon={<Phone className="w-3.5 h-3.5" />}
                 label="Telefono"
-                value={w.phone}
+                value={w.owner_phone}
               />
             )}
-            {w.vat_number && (
-              <Row label="P.IVA" value={w.vat_number} mono />
-            )}
-            {w.tax_code && (
-              <Row label="Codice fiscale" value={w.tax_code} mono />
-            )}
+            {w.vat_number && <Row label="P.IVA" value={w.vat_number} mono />}
+            {w.tax_code && <Row label="Codice fiscale" value={w.tax_code} mono />}
             {(w.address || w.city) && (
               <Row
                 icon={<MapPin className="w-3.5 h-3.5" />}
@@ -141,33 +144,102 @@ export function WorkshopDrawer({
             <Row
               icon={<CalendarClock className="w-3.5 h-3.5" />}
               label="Ultimo accesso"
-              value={w.last_sign_in_at ? formatDateTime(w.last_sign_in_at) : "mai loggato"}
+              value={
+                w.last_activity_at ? formatDateTime(w.last_activity_at) : "mai loggato"
+              }
             />
           </Section>
 
+          {/* Team / Membri */}
+          <Section
+            title={`Team (${w.members_count}${w.staff_count > 0 ? ` — ${w.staff_count} staff` : ""})`}
+          >
+            {loadingMembers ? (
+              <div className="flex items-center gap-2 text-xs text-text-subtle py-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Caricamento membri…
+              </div>
+            ) : !members || members.length === 0 ? (
+              <div className="text-xs text-text-subtle py-2">Nessun membro</div>
+            ) : (
+              <div className="space-y-1.5">
+                {members.map((m) => {
+                  const Icon = m.role === "owner" ? ShieldCheck : User;
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md bg-bg-hover/30 border border-border"
+                    >
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full text-[10px] font-semibold flex items-center justify-center shrink-0",
+                          m.role === "owner"
+                            ? "bg-accent/15 text-accent"
+                            : "bg-status-info/15 text-status-info"
+                        )}
+                      >
+                        {initials(m.full_name || m.email)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-medium truncate">
+                            {m.full_name || "Senza nome"}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[9px] uppercase tracking-wide px-1 py-0.5 rounded inline-flex items-center gap-0.5",
+                              m.role === "owner"
+                                ? "bg-accent/10 text-accent"
+                                : "bg-status-info/10 text-status-info"
+                            )}
+                          >
+                            <Icon className="w-2.5 h-2.5" strokeWidth={2.5} />
+                            {m.role === "owner" ? "Titolare" : "Dipendente"}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-text-subtle truncate">
+                          {m.email}
+                        </div>
+                        <div className="text-[10px] text-text-subtle">
+                          {m.last_sign_in_at
+                            ? `Ultimo accesso ${formatDateTime(m.last_sign_in_at)}`
+                            : "Mai loggato"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+
           {/* Statistiche */}
-          <Section title="Statistiche (sola lettura)">
+          <Section title="Statistiche">
             <div className="grid grid-cols-2 gap-2">
-              <Stat label="Lead totali" value={w.leads_count} />
+              <Stat
+                icon={<UsersIcon className="w-3 h-3" />}
+                label="Lead totali"
+                value={w.leads_count}
+              />
               <Stat
                 label="Pratiche"
                 value={w.cases_count}
                 hint={w.cases_open_count > 0 ? `${w.cases_open_count} aperte` : undefined}
               />
               <Stat
+                icon={<Euro className="w-3 h-3" />}
                 label="Fatturato"
                 value={formatCurrency(w.revenue_total)}
-                icon={<Euro className="w-3 h-3" />}
               />
               <Stat
+                icon={<FileText className="w-3 h-3" />}
                 label="Preventivi/Fatture"
                 value={w.invoices_count}
-                icon={<FileText className="w-3 h-3" />}
               />
               <Stat
+                icon={<ImageIcon className="w-3 h-3" />}
                 label="Documenti caricati"
                 value={w.documents_count}
-                icon={<ImageIcon className="w-3 h-3" />}
               />
             </div>
           </Section>
@@ -175,13 +247,13 @@ export function WorkshopDrawer({
           {/* Integrazioni */}
           <Section title="Integrazioni">
             <div className="flex items-center gap-2 text-sm">
-              <Facebook className="w-4 h-4 text-blue-400" />
+              <Facebook className="w-4 h-4 text-status-info" />
               <span>Facebook Ads</span>
               <span
                 className={cn(
                   "ml-auto text-[11px] font-medium px-1.5 py-0.5 rounded",
                   w.facebook_connected
-                    ? "bg-emerald-500/15 text-emerald-400"
+                    ? "bg-status-success/15 text-status-success"
                     : "bg-bg-hover text-text-subtle"
                 )}
               >
@@ -191,37 +263,15 @@ export function WorkshopDrawer({
           </Section>
         </div>
 
-        <div className="px-5 py-3 border-t border-border shrink-0 flex gap-2">
-          <button
-            onClick={onToggleBan}
-            disabled={isCurrent}
-            className={cn(
-              "flex-1 inline-flex items-center justify-center gap-2 font-medium text-sm px-4 py-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
-              disabled
-                ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                : "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
-            )}
-            type="button"
-            title={isCurrent ? "Non puoi disabilitare il tuo account" : undefined}
-          >
-            {disabled ? (
-              <>
-                <CheckCircle className="w-4 h-4" /> Riabilita
-              </>
-            ) : (
-              <>
-                <Ban className="w-4 h-4" /> Disabilita
-              </>
-            )}
-          </button>
+        <div className="px-5 py-3 border-t border-border shrink-0">
           <button
             onClick={onDelete}
             disabled={isCurrent}
-            className="flex-1 inline-flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium text-sm px-4 py-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full inline-flex items-center justify-center gap-2 bg-status-danger/20 hover:bg-status-danger/30 text-status-danger font-medium text-sm px-4 py-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             type="button"
-            title={isCurrent ? "Non puoi eliminare il tuo account" : undefined}
+            title={isCurrent ? "Non puoi eliminare il tuo workshop" : undefined}
           >
-            <Trash2 className="w-4 h-4" /> Elimina
+            <Trash2 className="w-4 h-4" /> Elimina officina
           </button>
         </div>
       </aside>
@@ -229,13 +279,7 @@ export function WorkshopDrawer({
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
       <h3 className="text-[10px] uppercase tracking-wide text-text-subtle font-semibold mb-2">
@@ -261,10 +305,7 @@ function Row({
     <div className="flex items-start gap-2 text-sm">
       {icon && <span className="text-text-subtle mt-0.5 shrink-0">{icon}</span>}
       <span className="text-text-muted text-xs min-w-[100px] shrink-0">{label}</span>
-      <span
-        className={cn("text-text truncate", mono && "font-mono")}
-        title={value}
-      >
+      <span className={cn("text-text truncate", mono && "font-mono")} title={value}>
         {value}
       </span>
     </div>
@@ -289,7 +330,7 @@ function Stat({
         {label}
       </div>
       <div className="text-base font-semibold tabular-nums mt-1">{value}</div>
-      {hint && <div className="text-[10px] text-yellow-400">{hint}</div>}
+      {hint && <div className="text-[10px] text-status-warning">{hint}</div>}
     </div>
   );
 }

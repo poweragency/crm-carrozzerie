@@ -733,30 +733,44 @@ export type Database = {
         Args: Record<string, never>;
         Returns: string;
       };
+      admin_get_workshop_members: {
+        Args: { p_workshop_id: string };
+        Returns: Array<{
+          id: string;
+          full_name: string | null;
+          email: string;
+          role: Database["public"]["Enums"]["user_role"];
+          created_at: string;
+          last_sign_in_at: string | null;
+          banned_until: string | null;
+          email_confirmed: boolean;
+        }>;
+      };
       admin_get_workshops: {
         Args: Record<string, never>;
         Returns: Array<{
           id: string;
-          email: string;
-          workshop_name: string | null;
-          phone: string | null;
+          name: string;
           vat_number: string | null;
           tax_code: string | null;
           address: string | null;
           city: string | null;
           postal_code: string | null;
           province: string | null;
+          owner_email: string | null;
+          owner_full_name: string | null;
+          owner_phone: string | null;
           facebook_connected: boolean;
-          registered_at: string;
-          last_sign_in_at: string | null;
-          banned_until: string | null;
-          email_confirmed: boolean;
+          members_count: number;
+          staff_count: number;
           leads_count: number;
           cases_count: number;
           cases_open_count: number;
           revenue_total: number;
           invoices_count: number;
           documents_count: number;
+          registered_at: string;
+          last_activity_at: string | null;
         }>;
       };
     };

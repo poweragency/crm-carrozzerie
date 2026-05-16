@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import type { Workshop } from "./WorkshopTable";
 
 interface Props {
   onClose: () => void;
-  onCreated: (w: Workshop) => void;
+  onCreated: () => void;
 }
 
 function generatePassword(): string {
@@ -54,38 +53,13 @@ export function NewWorkshopModal({ onClose, onCreated }: Props) {
       return;
     }
 
-    const { id } = (await res.json()) as { id: string; email: string };
-
-    // Costruiamo un Workshop minimo da mostrare in tabella subito.
-    const newW: Workshop = {
-      id,
-      email: email.trim(),
-      workshop_name: workshopName.trim(),
-      phone: null,
-      vat_number: null,
-      tax_code: null,
-      address: null,
-      city: null,
-      postal_code: null,
-      province: null,
-      facebook_connected: false,
-      registered_at: new Date().toISOString(),
-      last_sign_in_at: null,
-      banned_until: null,
-      email_confirmed: true,
-      leads_count: 0,
-      cases_count: 0,
-      cases_open_count: 0,
-      revenue_total: 0,
-      invoices_count: 0,
-      documents_count: 0,
-    };
+    await res.json();
 
     toast.success("Officina creata", {
       description: `Credenziali: ${email} / ${password}`,
       duration: 15000,
     });
-    onCreated(newW);
+    onCreated();
   }
 
   function copyCredentials() {
@@ -179,8 +153,8 @@ export function NewWorkshopModal({ onClose, onCreated }: Props) {
               </button>
             </div>
             <p className="text-[11px] text-text-subtle mt-1.5">
-              L&apos;account sarà attivo subito (email pre-confermata).
-              Comunica tu le credenziali all&apos;officina.
+              L&apos;account sarà attivo subito (email pre-confermata). Comunica tu le
+              credenziali all&apos;officina.
             </p>
           </div>
 

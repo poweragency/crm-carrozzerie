@@ -14,12 +14,15 @@ export default async function AdminPage() {
   const isAdmin = user.app_metadata?.is_admin === true;
   if (!isAdmin) redirect("/dashboard");
 
-  const { data: workshops, error } = await supabase.rpc("admin_get_workshops");
+  const [{ data: workshops, error }, { data: callerProfile }] = await Promise.all([
+    supabase.rpc("admin_get_workshops"),
+    supabase.from("profiles").select("workshop_id").eq("id", user.id).single(),
+  ]);
 
   return (
     <WorkshopTable
       initialWorkshops={workshops ?? []}
-      currentUserId={user.id}
+      currentUserWorkshopId={callerProfile?.workshop_id ?? null}
       error={error?.message ?? null}
     />
   );
