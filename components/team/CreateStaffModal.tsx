@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Eye, EyeOff, Copy, Check } from "lucide-react";
+import { X, Eye, EyeOff, Copy, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Field } from "@/components/case/Field";
 
@@ -11,6 +11,7 @@ interface Props {
 }
 
 function generatePassword(): string {
+  // Niente caratteri ambigui (I, l, O, 0, 1) — alta leggibilità per copia manuale.
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
   let s = "";
   for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
@@ -25,6 +26,11 @@ export function CreateStaffModal({ onClose, onCreated }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Quando settato, mostra la schermata "credenziali create"
+  const [createdCreds, setCreatedCreds] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   async function handleCreate() {
     setError(null);
@@ -55,18 +61,86 @@ export function CreateStaffModal({ onClose, onCreated }: Props) {
       return;
     }
 
-    toast.success("Dipendente creato", {
-      description: `Credenziali: ${email} / ${password}`,
-      duration: 15000,
-    });
-    onCreated();
+    toast.success("Dipendente creato");
+    setCreatedCreds({ email: email.trim(), password });
   }
 
-  function copyCredentials() {
-    const text = `Email: ${email}\nPassword: ${password}`;
+  function copyCredentials(creds?: { email: string; password: string }) {
+    const e = creds?.email ?? email;
+    const p = creds?.password ?? password;
+    const text = `Email: ${e}\nPassword: ${p}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  function handleDone() {
+    setCreatedCreds(null);
+    onCreated();
+  }
+
+  if (createdCreds) {
+    return (
+      <div
+        className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="card w-full max-w-md max-h-[90vh] overflow-auto animate-slide-up"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+            <CheckCircle2
+              className="w-5 h-5 text-status-success shrink-0"
+              strokeWidth={2.5}
+            />
+            <h2 className="text-base font-semibold">Dipendente creato</h2>
+          </div>
+
+          <div className="p-5 space-y-4">
+            <p className="text-sm text-text-muted">
+              Comunica queste credenziali al dipendente. Potrà accedere subito al CRM.
+              Dopo aver chiuso questa finestra <strong>non saranno più visibili</strong> —
+              copiale ora.
+            </p>
+
+            <div className="bg-bg-input border border-border rounded-md p-3 font-mono text-sm space-y-1.5">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase text-text-subtle w-16 shrink-0">
+                  Email
+                </span>
+                <span className="break-all select-all">{createdCreds.email}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase text-text-subtle w-16 shrink-0">
+                  Password
+                </span>
+                <span className="break-all select-all">{createdCreds.password}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => copyCredentials(createdCreds)}
+              className="btn-secondary w-full"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-status-success" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+              {copied ? "Copiate negli appunti!" : "Copia credenziali"}
+            </button>
+          </div>
+
+          <div className="px-5 py-3 border-t border-border flex justify-end">
+            <button onClick={handleDone} className="btn-primary" type="button">
+              Ho copiato, chiudi
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -163,7 +237,7 @@ export function CreateStaffModal({ onClose, onCreated }: Props) {
         <div className="px-5 py-3 border-t border-border flex justify-between gap-2">
           <button
             type="button"
-            onClick={copyCredentials}
+            onClick={() => copyCredentials()}
             disabled={!email || !password}
             className="btn-ghost disabled:opacity-40 text-xs"
           >

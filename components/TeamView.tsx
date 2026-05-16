@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ShieldCheck, User, Trash2, Mail, Clock } from "lucide-react";
+import { Plus, ShieldCheck, User, Trash2, Mail, Clock, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatDateTime, initials } from "@/lib/utils";
 import { useConfirm } from "./ConfirmDialog";
 import { EmptyState } from "./ui/EmptyState";
 import { CreateStaffModal } from "./team/CreateStaffModal";
+import { ResetStaffPasswordModal } from "./team/ResetStaffPasswordModal";
 import type { UserRole } from "@/types/database.types";
 
 export interface TeamMember {
@@ -24,6 +25,7 @@ export function TeamView({ members }: { members: TeamMember[] }) {
   const router = useRouter();
   const confirm = useConfirm();
   const [showNew, setShowNew] = useState(false);
+  const [resetTarget, setResetTarget] = useState<TeamMember | null>(null);
   const [list, setList] = useState<TeamMember[]>(members);
 
   async function handleDelete(m: TeamMember) {
@@ -75,6 +77,7 @@ export function TeamView({ members }: { members: TeamMember[] }) {
             description="Accesso completo: dati fiscali, Facebook Ads, fatturato, gestione team."
             members={owners}
             onDelete={handleDelete}
+            onReset={setResetTarget}
           />
           <Section
             title="Dipendenti"
@@ -82,6 +85,7 @@ export function TeamView({ members }: { members: TeamMember[] }) {
             members={staff}
             emptyHint="Nessun dipendente. Aggiungine uno per dargli accesso al gestionale."
             onDelete={handleDelete}
+            onReset={setResetTarget}
           />
         </div>
       </div>
@@ -95,6 +99,15 @@ export function TeamView({ members }: { members: TeamMember[] }) {
           }}
         />
       )}
+
+      {resetTarget && (
+        <ResetStaffPasswordModal
+          staffId={resetTarget.id}
+          staffName={resetTarget.full_name || resetTarget.email}
+          staffEmail={resetTarget.email}
+          onClose={() => setResetTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -105,12 +118,14 @@ function Section({
   members,
   emptyHint,
   onDelete,
+  onReset,
 }: {
   title: string;
   description: string;
   members: TeamMember[];
   emptyHint?: string;
   onDelete: (m: TeamMember) => void;
+  onReset: (m: TeamMember) => void;
 }) {
   return (
     <div className="card overflow-hidden">
@@ -176,14 +191,24 @@ function Section({
                   </div>
                 </div>
                 {m.role === "staff" && !m.is_me && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(m)}
-                    className="p-2 rounded-md text-text-muted hover:text-status-danger hover:bg-status-danger/10 transition-colors"
-                    title="Rimuovi dipendente"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onReset(m)}
+                      className="p-2 rounded-md text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+                      title="Resetta password"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(m)}
+                      className="p-2 rounded-md text-text-muted hover:text-status-danger hover:bg-status-danger/10 transition-colors"
+                      title="Rimuovi dipendente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             );
