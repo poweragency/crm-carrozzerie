@@ -2,10 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Plus,
   Trash2,
   Save,
@@ -14,6 +12,7 @@ import {
   Info,
   EyeOff,
 } from "lucide-react";
+import { Breadcrumb } from "../ui/Breadcrumb";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -281,12 +280,13 @@ export function InvoiceEditor({
   return (
     <div className="max-w-4xl mx-auto p-8 pb-40 sm:pb-32">
       <div className="sticky top-0 -mx-8 px-8 py-2 bg-bg/95 backdrop-blur z-20 border-b border-border/50 mb-4">
-        <Link
-          href={`/cases/${invoice.case_id}`}
-          className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
-        >
-          <ArrowLeft className="w-4 h-4" /> Torna alla pratica
-        </Link>
+        <Breadcrumb
+          items={[
+            { label: "Pratiche", href: "/cases" },
+            { label: customer.full_name || "Pratica", href: `/cases/${invoice.case_id}` },
+            { label: `${KIND_LABELS[kind]} ${invoice.number}` },
+          ]}
+        />
       </div>
 
       <div className="flex items-start justify-between gap-4 mb-4">

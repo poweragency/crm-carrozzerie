@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
+import { Breadcrumb } from "./ui/Breadcrumb";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { CASE_STATUS_LABELS, CASE_STATUS_ORDER } from "@/lib/constants";
@@ -285,12 +285,14 @@ export function CaseDetail({
   return (
     <div className="max-w-4xl mx-auto p-8 pb-40 sm:pb-32">
       <div className="sticky top-0 -mx-8 px-8 py-2 bg-bg/95 backdrop-blur z-20 border-b border-border/50 mb-4">
-        <Link
-          href="/cases"
-          className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
-        >
-          <ArrowLeft className="w-4 h-4" /> Pratiche
-        </Link>
+        <Breadcrumb
+          items={[
+            { label: "Pratiche", href: "/cases" },
+            {
+              label: customerForm.full_name || "Pratica senza cliente",
+            },
+          ]}
+        />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
