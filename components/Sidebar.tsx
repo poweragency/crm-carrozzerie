@@ -13,9 +13,11 @@ import {
   Calendar,
   X,
   ShieldCheck,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
+import { useCommandPalette } from "./CommandPalette";
 
 const baseNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -43,6 +45,7 @@ export function Sidebar({
   onClose,
 }: Props) {
   const pathname = usePathname();
+  const { setOpen: openPalette } = useCommandPalette();
 
   useEffect(() => {
     onClose();
@@ -104,6 +107,20 @@ export function Sidebar({
             type="button"
           >
             <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-3 pt-3">
+          <button
+            type="button"
+            onClick={() => openPalette(true)}
+            className="w-full flex items-center gap-2 px-3 h-9 rounded-md bg-bg-input border border-border text-sm text-text-subtle hover:border-border-hover hover:text-text-muted transition-colors"
+          >
+            <Search className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+            <span className="flex-1 text-left">Cerca...</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-bg-card border border-border rounded">
+              ⌘K
+            </kbd>
           </button>
         </div>
 

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/AppShell";
+import { CommandPaletteProvider } from "@/components/CommandPalette";
+import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 
 export default async function AppLayout({
   children,
@@ -23,13 +25,16 @@ export default async function AppLayout({
   const isAdmin = user.app_metadata?.is_admin === true;
 
   return (
-    <AppShell
-      userEmail={user.email ?? ""}
-      workshopName={profile?.workshop_name ?? "La mia carrozzeria"}
-      logoUrl={profile?.logo_url ?? null}
-      isAdmin={isAdmin}
-    >
-      {children}
-    </AppShell>
+    <CommandPaletteProvider>
+      <GlobalShortcuts />
+      <AppShell
+        userEmail={user.email ?? ""}
+        workshopName={profile?.workshop_name ?? "La mia carrozzeria"}
+        logoUrl={profile?.logo_url ?? null}
+        isAdmin={isAdmin}
+      >
+        {children}
+      </AppShell>
+    </CommandPaletteProvider>
   );
 }
