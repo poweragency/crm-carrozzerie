@@ -182,7 +182,7 @@ export function Sidebar({
         </nav>
 
         {isOwner && (
-          <div className="p-3 border-t border-border">
+          <div className="px-3 pt-1 pb-3">
             <Link
               href="/settings"
               className={cn(
