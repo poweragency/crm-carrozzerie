@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Phone, Mail, SlidersHorizontal, X as XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,26 +10,18 @@ import { CaseStatusBadge } from "./CaseStatusBadge";
 import { cn, formatCurrency, formatDate, initials } from "@/lib/utils";
 
 const AVATAR_COLORS = [
-  "bg-blue-500/20 text-blue-300",
-  "bg-emerald-500/20 text-emerald-300",
-  "bg-purple-500/20 text-purple-300",
-  "bg-yellow-500/20 text-yellow-300",
-  "bg-pink-500/20 text-pink-300",
-  "bg-cyan-500/20 text-cyan-300",
-  "bg-orange-500/20 text-orange-300",
-  "bg-red-500/20 text-red-300",
+  "bg-status-info/20 text-status-info",
+  "bg-status-success/20 text-status-success",
+  "bg-chart-5/20 text-chart-5",
+  "bg-status-warning/20 text-status-warning",
+  "bg-accent/20 text-accent",
 ];
-import {
-  customerFormSchema,
-  vehicleFormSchema,
-  caseFormSchema,
-  type CustomerFormValues,
-  type VehicleFormInputValues,
-} from "@/lib/schemas";
-import { CustomerPanel } from "./case/CustomerPanel";
-import { VehiclePanel } from "./case/VehiclePanel";
+import { caseFormSchema } from "@/lib/schemas";
 import { CasePanel } from "./case/CasePanel";
-import type { Case, CaseStatus } from "@/types/database.types";
+import { Field } from "./case/Field";
+import { CustomerFormModal } from "./customer/CustomerFormModal";
+import { VehicleFormModal } from "./customer/VehicleFormModal";
+import type { Case, CaseStatus, Customer, Vehicle } from "@/types/database.types";
 
 export type CaseWithRelations = Case & {
   customers: {
@@ -41,11 +33,7 @@ export type CaseWithRelations = Case & {
   vehicles: { make: string | null; model: string | null; plate: string | null } | null;
 };
 
-export function CasesTable({
-  initialCases,
-}: {
-  initialCases: CaseWithRelations[];
-}) {
+export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[] }) {
   const router = useRouter();
   const [cases] = useState<CaseWithRelations[]>(initialCases);
   const [search, setSearch] = useState("");
@@ -57,9 +45,9 @@ export function CasesTable({
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState("");
-  const [sortBy, setSortBy] = useState<"date-desc" | "date-asc" | "price-desc" | "price-asc">(
-    "date-desc"
-  );
+  const [sortBy, setSortBy] = useState<
+    "date-desc" | "date-asc" | "price-desc" | "price-asc"
+  >("date-desc");
 
   const insuranceOptions = useMemo(() => {
     const set = new Set<string>();
@@ -279,11 +267,7 @@ export function CasesTable({
             </select>
           </div>
           {activeFiltersCount > 0 && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="btn-ghost text-xs"
-            >
+            <button type="button" onClick={resetFilters} className="btn-ghost text-xs">
               <XIcon className="w-3.5 h-3.5" />
               Azzera filtri
             </button>
@@ -296,13 +280,27 @@ export function CasesTable({
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-bg-hover/50">
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Cliente</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Contatti</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Veicolo</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Assicurazione</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Stato</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Prezzo</th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">Aperta</th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Cliente
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Contatti
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Veicolo
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Assicurazione
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Stato
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Prezzo
+                </th>
+                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                  Aperta
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -316,76 +314,79 @@ export function CasesTable({
                 </tr>
               ) : (
                 filtered.map((c, idx) => {
-                  const avatarColor = AVATAR_COLORS[
-                    (c.customers?.full_name?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length
-                  ];
+                  const avatarColor =
+                    AVATAR_COLORS[
+                      (c.customers?.full_name?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length
+                    ];
                   return (
-                  <tr
-                    key={c.id}
-                    onClick={() => router.push(`/cases/${c.id}`)}
-                    className={cn(
-                      "transition-colors cursor-pointer group border-l-2 border-transparent",
-                      idx % 2 === 1 && "bg-bg-hover/30",
-                      "hover:bg-bg-hover hover:border-l-accent"
-                    )}
-                  >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={cn(
-                            "w-8 h-8 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 ring-2 ring-transparent group-hover:ring-accent/30 transition-all",
-                            avatarColor
-                          )}
-                        >
-                          {initials(c.customers?.full_name ?? "?")}
-                        </div>
-                        <span className="text-sm font-medium truncate">
-                          {c.customers?.full_name ?? "—"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="space-y-0.5">
-                        {c.customers?.phone && (
-                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                            <Phone className="w-3 h-3" strokeWidth={2} />
-                            {c.customers.phone}
-                          </div>
-                        )}
-                        {c.customers?.email && (
-                          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-                            <Mail className="w-3 h-3" strokeWidth={2} />
-                            <span className="truncate max-w-[180px]">
-                              {c.customers.email}
-                            </span>
-                          </div>
-                        )}
-                        {!c.customers?.phone && !c.customers?.email && (
-                          <span className="text-xs text-text-subtle">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-text-muted">
-                      {[c.vehicles?.make, c.vehicles?.model].filter(Boolean).join(" ") || "—"}
-                      {c.vehicles?.plate && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-bg-hover font-mono">
-                          {c.vehicles.plate}
-                        </span>
+                    <tr
+                      key={c.id}
+                      onClick={() => router.push(`/cases/${c.id}`)}
+                      className={cn(
+                        "transition-colors cursor-pointer group border-l-2 border-transparent",
+                        idx % 2 === 1 && "bg-bg-hover/30",
+                        "hover:bg-bg-hover hover:border-l-accent"
                       )}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-text-muted">
-                      {c.insurance_company ?? "—"}
-                    </td>
-                    <td className="px-5 py-3">
-                      <CaseStatusBadge status={c.status} />
-                    </td>
-                    <td className="px-5 py-3 text-sm tabular-nums">
-                      {formatCurrency(c.price)}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-text-muted">
-                      {formatDate(c.created_at)}
-                    </td>
-                  </tr>
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-full text-[11px] font-semibold flex items-center justify-center shrink-0 ring-2 ring-transparent group-hover:ring-accent/30 transition-all",
+                              avatarColor
+                            )}
+                          >
+                            {initials(c.customers?.full_name ?? "?")}
+                          </div>
+                          <span className="text-sm font-medium truncate">
+                            {c.customers?.full_name ?? "—"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="space-y-0.5">
+                          {c.customers?.phone && (
+                            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                              <Phone className="w-3 h-3" strokeWidth={2} />
+                              {c.customers.phone}
+                            </div>
+                          )}
+                          {c.customers?.email && (
+                            <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                              <Mail className="w-3 h-3" strokeWidth={2} />
+                              <span className="truncate max-w-[180px]">
+                                {c.customers.email}
+                              </span>
+                            </div>
+                          )}
+                          {!c.customers?.phone && !c.customers?.email && (
+                            <span className="text-xs text-text-subtle">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-text-muted">
+                        {[c.vehicles?.make, c.vehicles?.model]
+                          .filter(Boolean)
+                          .join(" ") || "—"}
+                        {c.vehicles?.plate && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-bg-hover font-mono">
+                            {c.vehicles.plate}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-text-muted">
+                        {c.insurance_company ?? "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <CaseStatusBadge status={c.status} />
+                      </td>
+                      <td className="px-5 py-3 text-sm tabular-nums">
+                        {formatCurrency(c.price)}
+                      </td>
+                      <td className="px-5 py-3 text-xs text-text-muted">
+                        {formatDate(c.created_at)}
+                      </td>
+                    </tr>
                   );
                 })
               )}
@@ -407,15 +408,8 @@ export function CasesTable({
   );
 }
 
-const emptyVehicle: VehicleFormInputValues = {
-  make: null,
-  model: null,
-  plate: null,
-  year: null,
-  color: null,
-  vin: null,
-  notes: null,
-};
+const CREATE_CUSTOMER = "__create_customer__";
+const CREATE_VEHICLE = "__create_vehicle__";
 
 function NewCaseModal({
   onClose,
@@ -425,12 +419,15 @@ function NewCaseModal({
   onCreated: (id: string) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [customer, setCustomer] = useState<CustomerFormValues>({
-    full_name: "",
-    phone: null,
-    email: null,
-  });
-  const [vehicle, setVehicle] = useState<VehicleFormInputValues>(emptyVehicle);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [customerId, setCustomerId] = useState<string>("");
+  const [vehicleId, setVehicleId] = useState<string>("");
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+
   const [caseForm, setCaseForm] = useState({
     status: "preventivo" as CaseStatus,
     insurance_company: null as string | null,
@@ -440,57 +437,72 @@ function NewCaseModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    (async () => {
+      const [{ data: cs }, { data: vs }] = await Promise.all([
+        supabase.from("customers").select("*").order("full_name", { ascending: true }),
+        supabase.from("vehicles").select("*").order("created_at", { ascending: false }),
+      ]);
+      setCustomers(cs ?? []);
+      setVehicles(vs ?? []);
+      setLoading(false);
+    })();
+  }, [supabase]);
+
+  const filteredVehicles = useMemo(
+    () => (customerId ? vehicles.filter((v) => v.customer_id === customerId) : []),
+    [vehicles, customerId]
+  );
+
+  function handleCustomerChange(value: string) {
+    if (value === CREATE_CUSTOMER) {
+      setShowCustomerModal(true);
+      return;
+    }
+    setCustomerId(value);
+    setVehicleId(""); // reset veicolo quando cambia cliente
+    setErrors((e) => {
+      const n = { ...e };
+      delete n["customer"];
+      return n;
+    });
+  }
+
+  function handleVehicleChange(value: string) {
+    if (value === CREATE_VEHICLE) {
+      if (!customerId) {
+        toast.error("Seleziona prima un cliente");
+        return;
+      }
+      setShowVehicleModal(true);
+      return;
+    }
+    setVehicleId(value);
+  }
+
   async function handleSave() {
     setErrors({});
-    const customerResult = customerFormSchema.safeParse(customer);
-    const vehicleHasAny = Object.values(vehicle).some((v) => v !== null && v !== "");
-    const vehicleResult = vehicleHasAny
-      ? vehicleFormSchema.safeParse(vehicle)
-      : { success: true as const, data: null };
-    const caseResult = caseFormSchema.safeParse(caseForm);
-
     const flat: Record<string, string> = {};
-    if (!customerResult.success) {
-      for (const i of customerResult.error.issues) flat[`customer.${String(i.path[0])}`] = i.message;
-    }
-    if (!vehicleResult.success) {
-      for (const i of vehicleResult.error.issues) flat[`vehicle.${String(i.path[0])}`] = i.message;
-    }
+    if (!customerId) flat["customer"] = "Seleziona un cliente";
+    const caseResult = caseFormSchema.safeParse(caseForm);
     if (!caseResult.success) {
-      for (const i of caseResult.error.issues) flat[`case.${String(i.path[0])}`] = i.message;
+      for (const i of caseResult.error.issues)
+        flat[`case.${String(i.path[0])}`] = i.message;
     }
     if (Object.keys(flat).length > 0) {
       setErrors(flat);
       toast.error("Controlla i campi evidenziati");
       return;
     }
-    if (!customerResult.success || !caseResult.success || !vehicleResult.success) return;
+    if (!caseResult.success) return;
 
     setSaving(true);
     try {
-      const { data: customerRow, error: custErr } = await supabase
-        .from("customers")
-        .insert(customerResult.data)
-        .select()
-        .single();
-      if (custErr || !customerRow) throw new Error(custErr?.message ?? "Errore cliente");
-
-      let vehicleId: string | null = null;
-      if (vehicleResult.data) {
-        const { data: vehRow, error: vehErr } = await supabase
-          .from("vehicles")
-          .insert({ ...vehicleResult.data, customer_id: customerRow.id })
-          .select()
-          .single();
-        if (vehErr) throw new Error(`Veicolo: ${vehErr.message}`);
-        vehicleId = vehRow?.id ?? null;
-      }
-
       const { data: caseRow, error: caseErr } = await supabase
         .from("cases")
         .insert({
-          customer_id: customerRow.id,
-          vehicle_id: vehicleId,
+          customer_id: customerId,
+          vehicle_id: vehicleId || null,
           status: caseResult.data.status,
           insurance_company: caseResult.data.insurance_company,
           description: caseResult.data.description,
@@ -531,39 +543,71 @@ function NewCaseModal({
       >
         <div className="px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold">Nuova pratica</h2>
-          <p className="text-xs text-text-subtle mt-0.5">Compila i dati cliente, veicolo e pratica.</p>
+          <p className="text-xs text-text-subtle mt-0.5">
+            Seleziona cliente e veicolo, poi compila i dati della pratica.
+          </p>
         </div>
         <div className="p-5 space-y-6">
-          <CustomerPanel
-            values={customer}
-            errors={{
-              full_name: errors["customer.full_name"],
-              phone: errors["customer.phone"],
-              email: errors["customer.email"],
-            }}
-            onChange={(patch) => {
-              setCustomer((c) => ({ ...c, ...patch }));
-              for (const k of Object.keys(patch) as string[]) clearError(`customer.${k}`);
-            }}
-          />
-          <VehiclePanel
-            values={vehicle}
-            errors={{
-              make: errors["vehicle.make"],
-              model: errors["vehicle.model"],
-              plate: errors["vehicle.plate"],
-              year: errors["vehicle.year"],
-              color: errors["vehicle.color"],
-              vin: errors["vehicle.vin"],
-            }}
-            onChange={(patch) => {
-              setVehicle((v) => ({ ...v, ...patch }));
-              for (const k of Object.keys(patch) as string[]) clearError(`vehicle.${k}`);
-            }}
-            vehicles={[]}
-            selectedVehicleId={null}
-            onSelectVehicle={() => undefined}
-          />
+          <div className="space-y-3">
+            <Field label="Cliente *" htmlFor="nc-customer" error={errors["customer"]}>
+              <select
+                id="nc-customer"
+                value={customerId}
+                onChange={(e) => handleCustomerChange(e.target.value)}
+                className="input-base"
+                disabled={loading}
+              >
+                <option value="" disabled>
+                  {loading ? "Caricamento..." : "— Seleziona cliente —"}
+                </option>
+                <option value={CREATE_CUSTOMER}>+ Crea nuovo cliente</option>
+                {customers.length > 0 && (
+                  <optgroup label="Clienti esistenti">
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.full_name}
+                        {c.phone ? ` · ${c.phone}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </Field>
+
+            <Field
+              label="Veicolo"
+              htmlFor="nc-vehicle"
+              hint={
+                !customerId
+                  ? "Seleziona prima un cliente per vedere le sue vetture"
+                  : filteredVehicles.length === 0
+                    ? "Il cliente non ha ancora vetture — usa 'Aggiungi vettura'"
+                    : undefined
+              }
+            >
+              <select
+                id="nc-vehicle"
+                value={vehicleId}
+                onChange={(e) => handleVehicleChange(e.target.value)}
+                className="input-base"
+                disabled={!customerId || loading}
+              >
+                <option value="">— Nessun veicolo —</option>
+                <option value={CREATE_VEHICLE}>+ Aggiungi vettura al cliente</option>
+                {filteredVehicles.length > 0 && (
+                  <optgroup label="Vetture del cliente">
+                    {filteredVehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {[v.make, v.model, v.plate].filter(Boolean).join(" · ") ||
+                          "Veicolo senza dati"}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </Field>
+          </div>
+
           <CasePanel
             values={caseForm}
             errors={{
@@ -582,11 +626,40 @@ function NewCaseModal({
           <button onClick={onClose} className="btn-secondary" type="button">
             Annulla
           </button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary" type="button">
+          <button
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="btn-primary"
+            type="button"
+          >
             {saving ? "Salvataggio..." : "Crea pratica"}
           </button>
         </div>
       </div>
+
+      {showCustomerModal && (
+        <CustomerFormModal
+          onClose={() => setShowCustomerModal(false)}
+          onSaved={(c) => {
+            setCustomers((prev) => [...prev, c]);
+            setCustomerId(c.id);
+            setVehicleId("");
+            setShowCustomerModal(false);
+          }}
+        />
+      )}
+
+      {showVehicleModal && customerId && (
+        <VehicleFormModal
+          customerId={customerId}
+          onClose={() => setShowVehicleModal(false)}
+          onSaved={(v) => {
+            setVehicles((prev) => [...prev, v]);
+            setVehicleId(v.id);
+            setShowVehicleModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

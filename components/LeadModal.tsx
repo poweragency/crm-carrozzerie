@@ -126,52 +126,49 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
   async function handleDelete() {
     if (!lead) return;
 
-    // Conta cosa verrà eliminato in cascata
+    // Conta solo le pratiche aperte del customer linked (saranno eliminate).
+    // Il customer e le pratiche chiuse restano come storico in /customers.
     const { data: customers } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, full_name")
       .eq("lead_id", lead.id);
     const customerIds = customers?.map((c) => c.id) ?? [];
+    const customerNames = customers?.map((c) => c.full_name) ?? [];
 
-    let caseCount = 0;
-    let invoiceCount = 0;
+    let openCases = 0;
     if (customerIds.length > 0) {
-      const [{ count: cc }, { count: ic }] = await Promise.all([
-        supabase
-          .from("cases")
-          .select("id", { count: "exact", head: true })
-          .in("customer_id", customerIds),
-        supabase
-          .from("invoices")
-          .select("id", { count: "exact", head: true })
-          .in("customer_id", customerIds),
-      ]);
-      caseCount = cc ?? 0;
-      invoiceCount = ic ?? 0;
+      const { count } = await supabase
+        .from("cases")
+        .select("id", { count: "exact", head: true })
+        .in("customer_id", customerIds)
+        .in("status", ["preventivo", "attesa_pezzi", "lavorazione"]);
+      openCases = count ?? 0;
     }
 
-    const parts: string[] = [];
-    if (customerIds.length > 0)
-      parts.push(`${customerIds.length} ${customerIds.length === 1 ? "cliente" : "clienti"}`);
-    if (caseCount > 0)
-      parts.push(`${caseCount} ${caseCount === 1 ? "pratica" : "pratiche"}`);
-    if (invoiceCount > 0)
-      parts.push(`${invoiceCount} preventivi/fatture`);
-
-    const detail =
-      parts.length > 0
-        ? `\n\nVerranno eliminati anche: ${parts.join(", ")}.`
-        : "";
+    const details: string[] = [];
+    if (openCases > 0) {
+      details.push(
+        `Verranno eliminate ${openCases} ${openCases === 1 ? "pratica aperta" : "pratiche aperte"}.`
+      );
+    }
+    if (customerNames.length > 0) {
+      details.push(
+        `Il cliente ${customerNames.join(", ")} resterà nella sezione Clienti con eventuali pratiche già chiuse come storico.`
+      );
+    }
 
     const ok = await confirm({
       title: `Eliminare il lead "${lead.full_name}"?`,
-      description: `${detail.replace(/^\n\n/, "")}\n\nAzione irreversibile.`.trim(),
+      description:
+        details.length > 0 ? details.join("\n\n") : "Il lead verrà rimosso dal Kanban.",
       confirmLabel: "Elimina",
       variant: "danger",
     });
     if (!ok) return;
 
-    const { error } = await supabase.from("leads").delete().eq("id", lead.id);
+    const { error } = await supabase.rpc("delete_lead_cascade", {
+      p_lead_id: lead.id,
+    });
     if (error) {
       toast.error("Eliminazione fallita", { description: error.message });
       return;
@@ -183,7 +180,9 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
 
   async function handleAddNote() {
     if (!lead || !newNote.trim()) return;
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("notes")
       .insert({ lead_id: lead.id, body: newNote.trim(), author_id: user?.id ?? null })
@@ -273,7 +272,9 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
           <FormField label="Stato" error={errors.status}>
             <select
               value={form.status}
-              onChange={(e) => setField("status", e.target.value as LeadFormValues["status"])}
+              onChange={(e) =>
+                setField("status", e.target.value as LeadFormValues["status"])
+              }
               className="input-base"
             >
               {LEAD_STATUS_ORDER.map((s) => (
@@ -301,7 +302,11 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
                   placeholder="Aggiungi una nota..."
                   className="input-base"
                 />
-                <button onClick={handleAddNote} className="btn-secondary shrink-0" type="button">
+                <button
+                  onClick={handleAddNote}
+                  className="btn-secondary shrink-0"
+                  type="button"
+                >
                   Aggiungi
                 </button>
               </div>
@@ -341,7 +346,12 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
             <button onClick={attemptClose} className="btn-secondary" type="button">
               Annulla
             </button>
-            <button onClick={handleSave} disabled={saving} className="btn-primary" type="button">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary"
+              type="button"
+            >
               {saving ? "Salvataggio..." : "Salva"}
             </button>
           </div>
