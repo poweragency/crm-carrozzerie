@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  FileText,
-  Plus,
-  ChevronRight,
-  ChevronDown,
-  EyeOff,
-  FileSpreadsheet,
-  Receipt,
-} from "lucide-react";
+import { FileText, Plus, ChevronRight, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import type { Invoice, InvoiceStatus } from "@/types/database.types";
@@ -42,34 +34,17 @@ interface Props {
 
 export function InvoicesPanel({ caseId, invoices }: Props) {
   const router = useRouter();
-  const [creating, setCreating] = useState<"preventivo" | "fattura" | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onClick(e: MouseEvent) {
-      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    window.addEventListener("mousedown", onClick);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onClick);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
-
-  async function createNew(kind: "preventivo" | "fattura") {
-    setMenuOpen(false);
-    setCreating(kind);
+  async function createNew() {
+    setCreating(true);
     try {
+      // Si crea come bozza di preventivo. Nell'editor l'utente può
+      // cambiare in fattura tramite il selettore Tipo.
       const res = await fetch("/api/invoices", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ case_id: caseId, kind }),
+        body: JSON.stringify({ case_id: caseId, kind: "preventivo" }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -79,7 +54,7 @@ export function InvoicesPanel({ caseId, invoices }: Props) {
       const { id } = (await res.json()) as { id: string };
       router.push(`/invoices/${id}`);
     } finally {
-      setCreating(null);
+      setCreating(false);
     }
   }
 
@@ -91,60 +66,15 @@ export function InvoicesPanel({ caseId, invoices }: Props) {
           Preventivi e fatture
           <span className="text-text-subtle">({invoices.length})</span>
         </div>
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            disabled={creating !== null}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            className="btn-primary py-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {creating === "preventivo"
-              ? "Creazione preventivo..."
-              : creating === "fattura"
-                ? "Creazione fattura..."
-                : "Preventivo / Fattura"}
-            <ChevronDown className="w-3.5 h-3.5 -mr-0.5" />
-          </button>
-
-          {menuOpen && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full mt-1 w-52 bg-bg-card border border-border rounded-md shadow-card-hover overflow-hidden z-30 animate-fade-in"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => createNew("preventivo")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-bg-hover transition-colors"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-text-muted shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">Preventivo</div>
-                  <div className="text-[10px] text-text-subtle">
-                    Numerazione PREV-{new Date().getFullYear()}-…
-                  </div>
-                </div>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => createNew("fattura")}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-bg-hover transition-colors border-t border-border"
-              >
-                <Receipt className="w-4 h-4 text-accent shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">Fattura</div>
-                  <div className="text-[10px] text-text-subtle">
-                    Numerazione FATT-{new Date().getFullYear()}-…
-                  </div>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={createNew}
+          disabled={creating}
+          className="btn-primary py-1.5"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {creating ? "Creazione..." : "Preventivo / Fattura"}
+        </button>
       </div>
 
       {invoices.length === 0 ? (
