@@ -7,6 +7,7 @@ import { FileText, Plus, ChevronRight, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import type { Invoice, InvoiceStatus } from "@/types/database.types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
   bozza: "Bozza",
@@ -86,9 +87,11 @@ export function InvoicesPanel({ caseId, invoices }: Props) {
       </div>
 
       {invoices.length === 0 ? (
-        <div className="text-center text-xs text-text-subtle py-6">
-          Nessun preventivo o fattura. Creane uno per generare il PDF da inviare al cliente.
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Nessun preventivo o fattura"
+          description="Creane uno per generare il PDF da inviare al cliente."
+        />
       ) : (
         <div className="space-y-1.5">
           {invoices.map((inv) => (

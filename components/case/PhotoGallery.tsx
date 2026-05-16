@@ -2,10 +2,18 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, Download, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Download,
+  Trash2,
+  ImageOff,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/utils";
 import type { Document } from "@/types/database.types";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Props {
   photos: Document[];
@@ -74,9 +82,11 @@ export function PhotoGallery({ photos, onDelete }: Props) {
 
   if (photos.length === 0) {
     return (
-      <div className="text-center text-xs text-text-subtle py-6">
-        Nessuna foto. Carica le foto del danno per documentare la pratica.
-      </div>
+      <EmptyState
+        icon={ImageOff}
+        title="Nessuna foto"
+        description="Carica le foto del danno per documentare la pratica."
+      />
     );
   }
 
