@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Wrench } from "lucide-react";
 
@@ -45,9 +44,7 @@ export default function LoginPage() {
 
         <div className="card p-6">
           <h2 className="text-xl font-semibold mb-1">Accedi</h2>
-          <p className="text-sm text-text-muted mb-6">
-            Inserisci le tue credenziali
-          </p>
+          <p className="text-sm text-text-muted mb-6">Inserisci le tue credenziali</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -90,13 +87,6 @@ export default function LoginPage() {
               {loading ? "Accesso..." : "Entra"}
             </button>
           </form>
-
-          <div className="mt-5 pt-5 border-t border-border text-center">
-            <span className="text-xs text-text-subtle">Non hai un account? </span>
-            <Link href="/signup" className="text-xs text-accent hover:underline">
-              Registra la tua carrozzeria
-            </Link>
-          </div>
         </div>
       </div>
     </div>
