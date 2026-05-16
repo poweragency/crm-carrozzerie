@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, ShieldCheck, User, Trash2, Mail, Clock, KeyRound } from "lucide-react";
+import {
+  Plus,
+  ShieldCheck,
+  User,
+  Trash2,
+  Mail,
+  Clock,
+  KeyRound,
+  Users as UsersIcon,
+  History,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatDateTime, initials } from "@/lib/utils";
 import { useConfirm } from "./ConfirmDialog";
 import { EmptyState } from "./ui/EmptyState";
 import { CreateStaffModal } from "./team/CreateStaffModal";
 import { ResetStaffPasswordModal } from "./team/ResetStaffPasswordModal";
+import { ActivityFeed, type ActivityEntry } from "./team/ActivityFeed";
 import type { UserRole } from "@/types/database.types";
 
 export interface TeamMember {
@@ -21,12 +32,21 @@ export interface TeamMember {
   is_me: boolean;
 }
 
-export function TeamView({ members }: { members: TeamMember[] }) {
+type Tab = "members" | "activity";
+
+export function TeamView({
+  members,
+  activity,
+}: {
+  members: TeamMember[];
+  activity: ActivityEntry[];
+}) {
   const router = useRouter();
   const confirm = useConfirm();
   const [showNew, setShowNew] = useState(false);
   const [resetTarget, setResetTarget] = useState<TeamMember | null>(null);
   const [list, setList] = useState<TeamMember[]>(members);
+  const [tab, setTab] = useState<Tab>("members");
 
   async function handleDelete(m: TeamMember) {
     const ok = await confirm({
@@ -62,32 +82,80 @@ export function TeamView({ members }: { members: TeamMember[] }) {
             {staff.length === 1 ? "e" : "i"}
           </p>
         </div>
-        <div className="ml-auto">
-          <button type="button" onClick={() => setShowNew(true)} className="btn-primary">
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-            Aggiungi dipendente
-          </button>
+        <div className="ml-auto flex items-center gap-3 flex-wrap">
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+            <button
+              type="button"
+              onClick={() => setTab("members")}
+              className={cn(
+                "px-3 py-1.5 transition-colors inline-flex items-center gap-1.5",
+                tab === "members"
+                  ? "bg-accent/10 text-accent"
+                  : "text-text-muted hover:text-text hover:bg-bg-hover"
+              )}
+            >
+              <UsersIcon className="w-3 h-3" />
+              Membri
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("activity")}
+              className={cn(
+                "px-3 py-1.5 transition-colors inline-flex items-center gap-1.5 border-l border-border",
+                tab === "activity"
+                  ? "bg-accent/10 text-accent"
+                  : "text-text-muted hover:text-text hover:bg-bg-hover"
+              )}
+            >
+              <History className="w-3 h-3" />
+              Attività
+              {activity.length > 0 && (
+                <span
+                  className={cn(
+                    "tabular-nums text-[10px] rounded-full px-1.5",
+                    tab === "activity" ? "bg-accent/20" : "bg-bg-hover text-text-subtle"
+                  )}
+                >
+                  {activity.length}
+                </span>
+              )}
+            </button>
+          </div>
+          {tab === "members" && (
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              Aggiungi dipendente
+            </button>
+          )}
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-8 max-w-4xl mx-auto w-full">
-        <div className="space-y-6">
-          <Section
-            title="Titolare"
-            description="Accesso completo: dati fiscali, Facebook Ads, fatturato, gestione team."
-            members={owners}
-            onDelete={handleDelete}
-            onReset={setResetTarget}
-          />
-          <Section
-            title="Dipendenti"
-            description="Accesso operativo: lead, clienti, pratiche, calendario. Non vedono dati fiscali, fatturato o Facebook Ads."
-            members={staff}
-            emptyHint="Nessun dipendente. Aggiungine uno per dargli accesso al gestionale."
-            onDelete={handleDelete}
-            onReset={setResetTarget}
-          />
-        </div>
+        {tab === "members" ? (
+          <div className="space-y-6">
+            <Section
+              title="Titolare"
+              description="Accesso completo: dati fiscali, Facebook Ads, fatturato, gestione team."
+              members={owners}
+              onDelete={handleDelete}
+              onReset={setResetTarget}
+            />
+            <Section
+              title="Dipendenti"
+              description="Accesso operativo: lead, clienti, pratiche, calendario. Non vedono dati fiscali, fatturato o Facebook Ads."
+              members={staff}
+              emptyHint="Nessun dipendente. Aggiungine uno per dargli accesso al gestionale."
+              onDelete={handleDelete}
+              onReset={setResetTarget}
+            />
+          </div>
+        ) : (
+          <ActivityFeed entries={activity} />
+        )}
       </div>
 
       {showNew && (

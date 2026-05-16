@@ -51,5 +51,14 @@ export default async function TeamPage() {
     return a.created_at.localeCompare(b.created_at);
   });
 
-  return <TeamView members={memberList} />;
+  // Audit log degli ultimi 100 eventi del workshop
+  const { data: auditRows } = await supabase
+    .from("workshop_audit_log")
+    .select(
+      "id, action, actor_full_name, actor_role, entity_type, entity_label, changes, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  return <TeamView members={memberList} activity={(auditRows ?? []) as never} />;
 }

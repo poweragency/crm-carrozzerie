@@ -583,6 +583,48 @@ export type Database = {
           },
         ];
       };
+      workshop_audit_log: {
+        Row: {
+          action: string;
+          actor_full_name: string | null;
+          actor_id: string | null;
+          actor_role: Database["public"]["Enums"]["user_role"] | null;
+          changes: Json | null;
+          created_at: string;
+          entity_id: string | null;
+          entity_label: string | null;
+          entity_type: string;
+          id: string;
+          workshop_id: string;
+        };
+        Insert: {
+          action: string;
+          actor_full_name?: string | null;
+          actor_id?: string | null;
+          actor_role?: Database["public"]["Enums"]["user_role"] | null;
+          changes?: Json | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_label?: string | null;
+          entity_type: string;
+          id?: string;
+          workshop_id: string;
+        };
+        Update: {
+          action?: string;
+          actor_full_name?: string | null;
+          actor_id?: string | null;
+          actor_role?: Database["public"]["Enums"]["user_role"] | null;
+          changes?: Json | null;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_label?: string | null;
+          entity_type?: string;
+          id?: string;
+          workshop_id?: string;
+        };
+        Relationships: [];
+      };
       workshops: {
         Row: {
           address: string | null;
