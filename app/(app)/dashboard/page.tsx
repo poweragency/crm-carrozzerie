@@ -55,7 +55,13 @@ export default async function DashboardPage() {
     { data: latestCases },
     { data: todayAppointments },
   ] = await Promise.all([
-    supabase.from("profiles").select("workshop_name, role").eq("id", user!.id).single(),
+    supabase
+      .from("profiles")
+      .select(
+        "workshop_name, role, workshop:workshops(name, vat_number, address, iban, fb_page_id)"
+      )
+      .eq("id", user!.id)
+      .single(),
     supabase.rpc("get_dashboard_stats", { p_days: DAYS_WINDOW }),
     supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5),
     supabase
@@ -135,9 +141,26 @@ export default async function DashboardPage() {
     },
   ];
 
-  const isEmpty = (stats.leads_total ?? 0) === 0 && totalCases === 0;
   const workshopName = profile?.workshop_name ?? "tua officina";
-  const showRevenue = (profile?.role ?? "owner") === "owner";
+  const isOwner = (profile?.role ?? "owner") === "owner";
+  const showRevenue = isOwner;
+
+  // Onboarding checklist (visibile solo a owner/admin)
+  const ws = (
+    profile as unknown as {
+      workshop?: {
+        vat_number: string | null;
+        address: string | null;
+        iban: string | null;
+        fb_page_id: string | null;
+      } | null;
+    }
+  )?.workshop;
+  const profileDone = !!(ws?.vat_number && ws?.address && ws?.iban);
+  const fbDone = !!ws?.fb_page_id;
+  const leadsDone = (stats.leads_total ?? 0) > 0;
+  const onboardingComplete = profileDone && fbDone && leadsDone;
+  const showOnboarding = isOwner && !onboardingComplete;
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
@@ -154,7 +177,13 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {isEmpty && <EmptyStateGuide />}
+      {showOnboarding && (
+        <OnboardingGuide
+          profileDone={profileDone}
+          fbDone={fbDone}
+          leadsDone={leadsDone}
+        />
+      )}
 
       {/* KPI cards con sparkline */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -403,52 +432,109 @@ export default async function DashboardPage() {
   );
 }
 
-function EmptyStateGuide() {
+function OnboardingGuide({
+  profileDone,
+  fbDone,
+  leadsDone,
+}: {
+  profileDone: boolean;
+  fbDone: boolean;
+  leadsDone: boolean;
+}) {
+  const doneCount = [profileDone, fbDone, leadsDone].filter(Boolean).length;
   return (
     <div className="card p-6 mb-6 bg-gradient-to-br from-accent/10 to-transparent border-accent/30">
-      <h2 className="text-base font-semibold mb-1">Benvenuto nel tuo CRM</h2>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h2 className="text-base font-semibold">Benvenuto nel tuo CRM</h2>
+        <span className="text-[11px] text-text-subtle tabular-nums shrink-0">
+          {doneCount}/3 completati
+        </span>
+      </div>
       <p className="text-sm text-text-muted mb-4">
-        Iniziamo a configurare l&apos;officina e a inserire i primi lead. Bastano due
-        minuti.
+        Tre passaggi rapidi per partire. La guida sparisce quando li hai completati tutti.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Link
+        <OnboardingStep
+          number={1}
+          title="Compila i dati dell'officina"
+          description="P.IVA, indirizzo, IBAN — serviranno nei preventivi."
           href="/settings"
-          className="card p-4 border-border hover:border-accent hover:shadow-card-hover transition-all"
-        >
-          <div className="text-xs uppercase tracking-wide text-text-subtle mb-1">
-            1. Profilo
-          </div>
-          <div className="text-sm font-medium">Compila i dati dell&apos;officina</div>
-          <div className="text-xs text-text-muted mt-1">
-            P.IVA, indirizzo, IBAN — serviranno nei preventivi.
-          </div>
-        </Link>
-        <Link
+          done={profileDone}
+          label="Profilo"
+        />
+        <OnboardingStep
+          number={2}
+          title="Collega le campagne"
+          description="Per ricevere i lead in automatico dalle Facebook Ads."
           href="/settings"
-          className="card p-4 border-border hover:border-accent hover:shadow-card-hover transition-all"
-        >
-          <div className="text-xs uppercase tracking-wide text-text-subtle mb-1">
-            2. Facebook
-          </div>
-          <div className="text-sm font-medium">Collega le campagne</div>
-          <div className="text-xs text-text-muted mt-1">
-            Per ricevere i lead in automatico dalle Facebook Ads.
-          </div>
-        </Link>
-        <Link
+          done={fbDone}
+          label="Facebook"
+        />
+        <OnboardingStep
+          number={3}
+          title="Crea il primo lead"
+          description="Inserisci manualmente o attendi i lead da Facebook."
           href="/leads"
-          className="card p-4 border-border hover:border-accent hover:shadow-card-hover transition-all"
-        >
-          <div className="text-xs uppercase tracking-wide text-text-subtle mb-1">
-            3. Lead
-          </div>
-          <div className="text-sm font-medium">Crea il primo lead</div>
-          <div className="text-xs text-text-muted mt-1">
-            Inserisci manualmente o attendi i lead da Facebook.
-          </div>
-        </Link>
+          done={leadsDone}
+          label="Lead"
+        />
       </div>
     </div>
+  );
+}
+
+function OnboardingStep({
+  number,
+  title,
+  description,
+  href,
+  done,
+  label,
+}: {
+  number: number;
+  title: string;
+  description: string;
+  href: string;
+  done: boolean;
+  label: string;
+}) {
+  const inner = (
+    <>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs uppercase tracking-wide text-text-subtle">
+          {number}. {label}
+        </span>
+        {done && (
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-status-success font-semibold">
+            Fatto
+          </span>
+        )}
+      </div>
+      <div className="text-sm font-medium">{title}</div>
+      <div className="text-xs text-text-muted mt-1">{description}</div>
+    </>
+  );
+
+  if (done) {
+    return (
+      <div
+        aria-label={`${title} (completato)`}
+        className="card p-4 border-status-success/30 bg-status-success/5 opacity-60 cursor-default relative overflow-hidden"
+      >
+        <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-status-success/20 text-status-success flex items-center justify-center">
+          <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
+        </div>
+        <div className="blur-[1px] saturate-50">{inner}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="card p-4 border-border hover:border-accent hover:shadow-card-hover transition-all"
+    >
+      {inner}
+    </Link>
   );
 }
