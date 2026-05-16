@@ -126,41 +126,96 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
   async function handleDelete() {
     if (!lead) return;
 
-    // Conta solo le pratiche aperte del customer linked (saranno eliminate).
-    // Il customer e le pratiche chiuse restano come storico in /customers.
-    const { data: customers } = await supabase
+    // Conta tutto quello che verrà eliminato in cascata.
+    // Customer e pratiche chiuse NON vengono toccati (restano in /customers).
+    const { data: customersData } = await supabase
       .from("customers")
       .select("id, full_name")
       .eq("lead_id", lead.id);
-    const customerIds = customers?.map((c) => c.id) ?? [];
-    const customerNames = customers?.map((c) => c.full_name) ?? [];
+    const customerIds = customersData?.map((c) => c.id) ?? [];
+    const customerNames = customersData?.map((c) => c.full_name) ?? [];
 
-    let openCases = 0;
-    if (customerIds.length > 0) {
-      const { count } = await supabase
-        .from("cases")
-        .select("id", { count: "exact", head: true })
-        .in("customer_id", customerIds)
-        .in("status", ["preventivo", "attesa_pezzi", "lavorazione"]);
-      openCases = count ?? 0;
+    // Pratiche aperte del customer linked
+    const { data: openCasesData } = customerIds.length
+      ? await supabase
+          .from("cases")
+          .select("id")
+          .in("customer_id", customerIds)
+          .in("status", ["preventivo", "attesa_pezzi", "lavorazione"])
+      : { data: [] as Array<{ id: string }> };
+    const openCaseIds = openCasesData?.map((c) => c.id) ?? [];
+
+    // Preventivi, fatture, documenti delle pratiche aperte (cascade DB li eliminerà)
+    let preventiviCount = 0;
+    let fattureCount = 0;
+    let documentsCount = 0;
+    if (openCaseIds.length > 0) {
+      const [{ count: prev }, { count: fatt }, { count: docs }] = await Promise.all([
+        supabase
+          .from("invoices")
+          .select("id", { count: "exact", head: true })
+          .in("case_id", openCaseIds)
+          .eq("kind", "preventivo"),
+        supabase
+          .from("invoices")
+          .select("id", { count: "exact", head: true })
+          .in("case_id", openCaseIds)
+          .eq("kind", "fattura"),
+        supabase
+          .from("documents")
+          .select("id", { count: "exact", head: true })
+          .in("case_id", openCaseIds),
+      ]);
+      preventiviCount = prev ?? 0;
+      fattureCount = fatt ?? 0;
+      documentsCount = docs ?? 0;
     }
 
-    const details: string[] = [];
-    if (openCases > 0) {
-      details.push(
-        `Verranno eliminate ${openCases} ${openCases === 1 ? "pratica aperta" : "pratiche aperte"}.`
+    // Note del lead (cascade DB le eliminerà)
+    const { count: leadNotesCount } = await supabase
+      .from("notes")
+      .select("id", { count: "exact", head: true })
+      .eq("lead_id", lead.id);
+
+    const bullets: string[] = [];
+    if (openCaseIds.length > 0) {
+      bullets.push(
+        `${openCaseIds.length} ${openCaseIds.length === 1 ? "pratica aperta" : "pratiche aperte"}`
       );
+    }
+    if (preventiviCount > 0) {
+      bullets.push(
+        `${preventiviCount} ${preventiviCount === 1 ? "preventivo" : "preventivi"}`
+      );
+    }
+    if (fattureCount > 0) {
+      bullets.push(`${fattureCount} ${fattureCount === 1 ? "fattura" : "fatture"}`);
+    }
+    if (documentsCount > 0) {
+      bullets.push(
+        `${documentsCount} ${documentsCount === 1 ? "documento (foto, PDF)" : "documenti (foto, PDF)"}`
+      );
+    }
+    if ((leadNotesCount ?? 0) > 0) {
+      bullets.push(
+        `${leadNotesCount} ${leadNotesCount === 1 ? "nota del lead" : "note del lead"}`
+      );
+    }
+
+    const sections: string[] = [];
+    if (bullets.length > 0) {
+      sections.push(`Verranno eliminati:\n• ${bullets.join("\n• ")}`);
     }
     if (customerNames.length > 0) {
-      details.push(
-        `Il cliente ${customerNames.join(", ")} resterà nella sezione Clienti con eventuali pratiche già chiuse come storico.`
+      sections.push(
+        `Il cliente "${customerNames.join('", "')}" resterà nella sezione Clienti, insieme alle vetture e alle eventuali pratiche già chiuse.`
       );
     }
+    sections.push("Operazione non reversibile.");
 
     const ok = await confirm({
       title: `Eliminare il lead "${lead.full_name}"?`,
-      description:
-        details.length > 0 ? details.join("\n\n") : "Il lead verrà rimosso dal Kanban.",
+      description: sections.join("\n\n"),
       confirmLabel: "Elimina",
       variant: "danger",
     });
