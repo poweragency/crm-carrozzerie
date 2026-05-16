@@ -158,8 +158,7 @@ export default async function DashboardPage() {
   )?.workshop;
   const profileDone = !!(ws?.vat_number && ws?.address && ws?.iban);
   const fbDone = !!ws?.fb_page_id;
-  const leadsDone = (stats.leads_total ?? 0) > 0;
-  const onboardingComplete = profileDone && fbDone && leadsDone;
+  const onboardingComplete = profileDone && fbDone;
   const showOnboarding = isOwner && !onboardingComplete;
 
   return (
@@ -177,13 +176,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {showOnboarding && (
-        <OnboardingGuide
-          profileDone={profileDone}
-          fbDone={fbDone}
-          leadsDone={leadsDone}
-        />
-      )}
+      {showOnboarding && <OnboardingGuide profileDone={profileDone} fbDone={fbDone} />}
 
       {/* KPI cards con sparkline */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -435,25 +428,24 @@ export default async function DashboardPage() {
 function OnboardingGuide({
   profileDone,
   fbDone,
-  leadsDone,
 }: {
   profileDone: boolean;
   fbDone: boolean;
-  leadsDone: boolean;
 }) {
-  const doneCount = [profileDone, fbDone, leadsDone].filter(Boolean).length;
+  const doneCount = [profileDone, fbDone].filter(Boolean).length;
   return (
     <div className="card p-6 mb-6 bg-gradient-to-br from-accent/10 to-transparent border-accent/30">
       <div className="flex items-start justify-between gap-3 mb-1">
         <h2 className="text-base font-semibold">Benvenuto nel tuo CRM</h2>
         <span className="text-[11px] text-text-subtle tabular-nums shrink-0">
-          {doneCount}/3 completati
+          {doneCount}/2 completati
         </span>
       </div>
       <p className="text-sm text-text-muted mb-4">
-        Tre passaggi rapidi per partire. La guida sparisce quando li hai completati tutti.
+        Due passaggi rapidi per partire. La guida sparisce quando li hai completati
+        entrambi.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <OnboardingStep
           number={1}
           title="Compila i dati dell'officina"
@@ -469,14 +461,6 @@ function OnboardingGuide({
           href="/settings"
           done={fbDone}
           label="Facebook"
-        />
-        <OnboardingStep
-          number={3}
-          title="Crea il primo lead"
-          description="Inserisci manualmente o attendi i lead da Facebook."
-          href="/leads"
-          done={leadsDone}
-          label="Lead"
         />
       </div>
     </div>
@@ -519,7 +503,7 @@ function OnboardingStep({
         <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-status-success/20 text-status-success flex items-center justify-center">
           <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
         </div>
-        <div className="text-text-muted">{inner}</div>
+        {inner}
       </div>
     );
   }
