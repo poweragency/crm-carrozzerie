@@ -72,12 +72,15 @@ describe("vehicleFormSchema", () => {
       make: "Fiat",
       model: "Panda",
       plate: "AB 123 CD",
-      year: 2020,
+      year: "2020",
       color: "rosso",
       vin: null,
       notes: null,
     });
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.year).toBe(2020);
+    }
   });
 
   it("rifiuta targa invalida con caratteri non ammessi", () => {
@@ -85,7 +88,7 @@ describe("vehicleFormSchema", () => {
       make: "Fiat",
       model: "Panda",
       plate: "@@@",
-      year: null,
+      year: "",
       color: null,
       vin: null,
       notes: null,
