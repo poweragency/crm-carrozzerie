@@ -4,11 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { CommandPaletteProvider } from "@/components/CommandPalette";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,11 +14,12 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("workshop_name, full_name, logo_url")
+    .select("workshop_name, full_name, logo_url, role")
     .eq("id", user.id)
     .single();
 
   const isAdmin = user.app_metadata?.is_admin === true;
+  const role = profile?.role ?? "owner";
 
   return (
     <CommandPaletteProvider>
@@ -33,6 +30,7 @@ export default async function AppLayout({
         workshopName={profile?.workshop_name ?? "La mia carrozzeria"}
         logoUrl={profile?.logo_url ?? null}
         isAdmin={isAdmin}
+        role={role}
       >
         {children}
       </AppShell>

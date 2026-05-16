@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 import { useCommandPalette } from "./CommandPalette";
 import { NotificationBell } from "./NotificationBell";
+import type { UserRole } from "@/types/database.types";
 
 const baseNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +36,7 @@ interface Props {
   workshopName: string;
   logoUrl: string | null;
   isAdmin: boolean;
+  role: UserRole;
   open: boolean;
   onClose: () => void;
 }
@@ -45,9 +47,11 @@ export function Sidebar({
   workshopName,
   logoUrl,
   isAdmin,
+  role,
   open,
   onClose,
 }: Props) {
+  const isOwner = role === "owner";
   const pathname = usePathname();
   const { setOpen: openPalette } = useCommandPalette();
 
@@ -143,18 +147,20 @@ export function Sidebar({
           })}
 
           <div className="mt-auto pt-3 border-t border-border space-y-1">
-            <Link
-              href="/settings"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                pathname === "/settings" || pathname.startsWith("/settings/")
-                  ? "bg-accent/10 text-accent"
-                  : "text-text-muted hover:text-text hover:bg-bg-hover"
-              )}
-            >
-              <Settings className="w-4 h-4" strokeWidth={2} />
-              Impostazioni
-            </Link>
+            {isOwner && (
+              <Link
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  pathname === "/settings" || pathname.startsWith("/settings/")
+                    ? "bg-accent/10 text-accent"
+                    : "text-text-muted hover:text-text hover:bg-bg-hover"
+                )}
+              >
+                <Settings className="w-4 h-4" strokeWidth={2} />
+                Impostazioni
+              </Link>
+            )}
             {isAdmin && (
               <Link
                 href="/admin"

@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { CASE_STATUS_COLORS, CASE_STATUS_LABELS, LEAD_STATUS_LABELS } from "@/lib/constants";
+import {
+  CASE_STATUS_COLORS,
+  CASE_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
+} from "@/lib/constants";
 import { formatCurrency, formatDateTime, initials } from "@/lib/utils";
 import {
   KanbanSquare,
@@ -51,17 +55,9 @@ export default async function DashboardPage() {
     { data: latestCases },
     { data: todayAppointments },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("workshop_name")
-      .eq("id", user!.id)
-      .single(),
+    supabase.from("profiles").select("workshop_name, role").eq("id", user!.id).single(),
     supabase.rpc("get_dashboard_stats", { p_days: DAYS_WINDOW }),
-    supabase
-      .from("leads")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(5),
+    supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5),
     supabase
       .from("cases")
       .select(
@@ -101,8 +97,7 @@ export default async function DashboardPage() {
     }
   }
 
-  const totalCases =
-    (stats.open_cases_total ?? 0) + (stats.completed_cases_total ?? 0);
+  const totalCases = (stats.open_cases_total ?? 0) + (stats.completed_cases_total ?? 0);
   const todayAppointmentsCount = todayAppointments?.length ?? 0;
 
   const statCards = [
@@ -142,6 +137,7 @@ export default async function DashboardPage() {
 
   const isEmpty = (stats.leads_total ?? 0) === 0 && totalCases === 0;
   const workshopName = profile?.workshop_name ?? "tua officina";
+  const showRevenue = (profile?.role ?? "owner") === "owner";
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
@@ -184,63 +180,76 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* Fatturato cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="card p-5 bg-gradient-to-br from-accent/10 to-transparent border-accent/20 hover:shadow-card-hover transition-all">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-accent/20 flex items-center justify-center shrink-0">
-              <Euro className="w-5 h-5 text-accent" strokeWidth={2} />
+      {/* Fatturato cards — visibili solo all'owner */}
+      {showRevenue && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <div className="card p-5 bg-gradient-to-br from-accent/10 to-transparent border-accent/20 hover:shadow-card-hover transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-md bg-accent/20 flex items-center justify-center shrink-0">
+                <Euro className="w-5 h-5 text-accent" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-wide text-text-muted">
+                  Fatturato stimato
+                </div>
+                <div className="text-2xl font-semibold tabular-nums mt-0.5">
+                  {formatCurrency(revenue)}
+                </div>
+                <div className="text-[11px] text-text-subtle">
+                  Somma di tutte le pratiche
+                </div>
+              </div>
+              <TrendingUp
+                className="w-5 h-5 text-accent ml-auto shrink-0"
+                strokeWidth={2}
+              />
             </div>
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wide text-text-muted">
-                Fatturato stimato
-              </div>
-              <div className="text-2xl font-semibold tabular-nums mt-0.5">
-                {formatCurrency(revenue)}
-              </div>
-              <div className="text-[11px] text-text-subtle">
-                Somma di tutte le pratiche
-              </div>
-            </div>
-            <TrendingUp className="w-5 h-5 text-accent ml-auto shrink-0" strokeWidth={2} />
           </div>
-        </div>
 
-        <div className="card p-5 bg-gradient-to-br from-status-success/10 to-transparent border-status-success/20 hover:shadow-card-hover transition-all">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-status-success/20 flex items-center justify-center shrink-0">
-              <Wallet className="w-5 h-5 text-status-success" strokeWidth={2} />
+          <div className="card p-5 bg-gradient-to-br from-status-success/10 to-transparent border-status-success/20 hover:shadow-card-hover transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-md bg-status-success/20 flex items-center justify-center shrink-0">
+                <Wallet className="w-5 h-5 text-status-success" strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-wide text-text-muted">
+                  Fatturato incassato
+                </div>
+                <div className="text-2xl font-semibold tabular-nums mt-0.5">
+                  {formatCurrency(collected)}
+                </div>
+                <div className="text-[11px] text-text-subtle">
+                  Solo pratiche consegnate
+                </div>
+              </div>
+              <CheckCircle2
+                className="w-5 h-5 text-status-success ml-auto shrink-0"
+                strokeWidth={2}
+              />
             </div>
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wide text-text-muted">
-                Fatturato incassato
-              </div>
-              <div className="text-2xl font-semibold tabular-nums mt-0.5">
-                {formatCurrency(collected)}
-              </div>
-              <div className="text-[11px] text-text-subtle">
-                Solo pratiche consegnate
-              </div>
-            </div>
-            <CheckCircle2
-              className="w-5 h-5 text-status-success ml-auto shrink-0"
-              strokeWidth={2}
-            />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Grafici fatturato 30gg + status donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="card p-5 lg:col-span-2 hover:shadow-card-hover transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold">Fatturato 30 giorni</h2>
-            <span className="text-[11px] text-text-subtle">
-              Totale {formatCurrency(revenueDaily.reduce((a, b) => a + b, 0))}
-            </span>
+      {/* Grafici fatturato 30gg (solo owner) + status donut (tutti) */}
+      <div
+        className={
+          showRevenue
+            ? "grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"
+            : "grid grid-cols-1 lg:max-w-md gap-4 mb-6"
+        }
+      >
+        {showRevenue && (
+          <div className="card p-5 lg:col-span-2 hover:shadow-card-hover transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Fatturato 30 giorni</h2>
+              <span className="text-[11px] text-text-subtle">
+                Totale {formatCurrency(revenueDaily.reduce((a, b) => a + b, 0))}
+              </span>
+            </div>
+            <RevenueChart data={revenueDaily} />
           </div>
-          <RevenueChart data={revenueDaily} />
-        </div>
+        )}
 
         <div className="card p-5 hover:shadow-card-hover transition-all">
           <h2 className="text-sm font-semibold mb-3">Pratiche per stato</h2>
@@ -316,9 +325,7 @@ export default async function DashboardPage() {
                       {initials(lead.full_name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium truncate">
-                        {lead.full_name}
-                      </div>
+                      <div className="text-sm font-medium truncate">{lead.full_name}</div>
                       <div className="text-xs text-text-subtle mt-0.5 truncate">
                         {lead.phone ?? "—"} · {formatDateTime(lead.created_at)}
                       </div>
