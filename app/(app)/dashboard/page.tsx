@@ -126,7 +126,7 @@ export default async function DashboardPage() {
       data: leadsSpark,
     },
     {
-      label: "Clienti convertiti",
+      label: "Clienti totali",
       value: stats.customers_total ?? 0,
       icon: Users,
       color: "text-status-success",
