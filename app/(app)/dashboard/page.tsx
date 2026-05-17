@@ -209,7 +209,7 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <KpiCard stat={statCards[1]} />
+          <KpiCard stat={statCards[0]} />
           <KpiCard stat={statCards[2]} />
         </div>
       )}
@@ -282,7 +282,7 @@ export default async function DashboardPage() {
             <RevenueChart data={revenueDaily} />
           </div>
         ) : (
-          <KpiCard stat={statCards[0]} />
+          <KpiCard stat={statCards[1]} />
         )}
 
         <div className="card p-5 hover:shadow-card-hover transition-all">
