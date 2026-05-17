@@ -9,19 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 import { CASE_STATUS_LABELS, CASE_STATUS_ORDER } from "@/lib/constants";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { formatDateTime, cn } from "@/lib/utils";
-import {
-  customerFormSchema,
-  vehicleFormSchema,
-  caseFormSchema,
-  type CustomerFormValues,
-  type VehicleFormInputValues,
-  type CaseFormInputValues,
-} from "@/lib/schemas";
-import { CustomerPanel } from "./case/CustomerPanel";
+import { caseFormSchema, type CaseFormInputValues } from "@/lib/schemas";
+import { CustomerPanel, type CustomerOption } from "./case/CustomerPanel";
 import { VehiclePanel } from "./case/VehiclePanel";
 import { CasePanel } from "./case/CasePanel";
 import { DocumentPanel } from "./case/DocumentPanel";
-import { NotesPanel } from "./case/NotesPanel";
 import { InvoicesPanel } from "./case/InvoicesPanel";
 import { NotifyButton } from "./case/NotifyButton";
 import { useConfirm } from "./ConfirmDialog";
@@ -30,7 +22,6 @@ import type {
   CaseStatus,
   Document,
   Invoice,
-  Note,
   Vehicle,
 } from "@/types/database.types";
 
@@ -46,39 +37,17 @@ type CaseWithCustomer = Case & {
 interface Props {
   initialCase: CaseWithCustomer;
   initialDocuments: Document[];
-  initialNotes: Note[];
+  initialCustomers: CustomerOption[];
   initialVehicles: Vehicle[];
   initialInvoices: Invoice[];
 }
 
 type FieldErrors = Record<string, string>;
 
-function vehicleToForm(v: Vehicle | null): VehicleFormInputValues {
-  return {
-    make: v?.make ?? null,
-    model: v?.model ?? null,
-    plate: v?.plate ?? null,
-    year: v?.year != null ? String(v.year) : null,
-    color: v?.color ?? null,
-    vin: v?.vin ?? null,
-    notes: v?.notes ?? null,
-  };
-}
-
-const emptyVehicleForm: VehicleFormInputValues = {
-  make: null,
-  model: null,
-  plate: null,
-  year: null,
-  color: null,
-  vin: null,
-  notes: null,
-};
-
 export function CaseDetail({
   initialCase,
   initialDocuments,
-  initialNotes,
+  initialCustomers,
   initialVehicles,
   initialInvoices,
 }: Props) {
@@ -88,24 +57,28 @@ export function CaseDetail({
 
   const [caseData, setCaseData] = useState(initialCase);
   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const invoices = initialInvoices;
 
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    initialCase.customer_id ?? initialCase.customers?.id ?? null
+  );
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
     initialCase.vehicle_id
   );
-  const initialSelectedVehicle =
-    initialVehicles.find((v) => v.id === initialCase.vehicle_id) ?? null;
 
-  const [customerForm, setCustomerForm] = useState<CustomerFormValues>({
-    full_name: initialCase.customers?.full_name ?? "",
-    phone: initialCase.customers?.phone ?? null,
-    email: initialCase.customers?.email ?? null,
-  });
-  const [vehicleForm, setVehicleForm] = useState<VehicleFormInputValues>(
-    vehicleToForm(initialSelectedVehicle)
+  const customerVehicles = useMemo(
+    () =>
+      selectedCustomerId
+        ? initialVehicles.filter((v) => v.customer_id === selectedCustomerId)
+        : [],
+    [initialVehicles, selectedCustomerId]
   );
+
+  const selectedCustomer = useMemo(
+    () => initialCustomers.find((c) => c.id === selectedCustomerId) ?? null,
+    [initialCustomers, selectedCustomerId]
+  );
+
   const [caseForm, setCaseForm] = useState<CaseFormInputValues>({
     status: initialCase.status,
     insurance_company: initialCase.insurance_company ?? null,
@@ -128,10 +101,15 @@ export function CaseDetail({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  function selectVehicle(id: string | null) {
+  function handleSelectCustomer(id: string | null) {
+    setSelectedCustomerId(id);
+    // Reset veicolo se il cliente cambia
+    setSelectedVehicleId(null);
+    setDirty(true);
+  }
+
+  function handleSelectVehicle(id: string | null) {
     setSelectedVehicleId(id);
-    const v = id ? vehicles.find((x) => x.id === id) ?? null : null;
-    setVehicleForm(id ? vehicleToForm(v) : emptyVehicleForm);
     setDirty(true);
   }
 
@@ -147,11 +125,11 @@ export function CaseDetail({
   async function handleSave() {
     setErrors({});
 
-    const customerResult = customerFormSchema.safeParse(customerForm);
-    const vehicleHasAny = Object.values(vehicleForm).some((v) => v !== null && v !== "");
-    const vehicleResult = vehicleHasAny
-      ? vehicleFormSchema.safeParse(vehicleForm)
-      : { success: true as const, data: null };
+    if (!selectedCustomerId) {
+      toast.error("Seleziona un cliente prima di salvare");
+      return;
+    }
+
     const caseResult = caseFormSchema.safeParse({
       status: caseForm.status,
       insurance_company: caseForm.insurance_company,
@@ -159,75 +137,25 @@ export function CaseDetail({
       price: caseForm.price,
     });
 
-    const flat: FieldErrors = {};
-    if (!customerResult.success) {
-      for (const i of customerResult.error.issues) flat[`customer.${String(i.path[0])}`] = i.message;
-    }
-    if (!vehicleResult.success) {
-      for (const i of vehicleResult.error.issues) flat[`vehicle.${String(i.path[0])}`] = i.message;
-    }
     if (!caseResult.success) {
-      for (const i of caseResult.error.issues) flat[`case.${String(i.path[0])}`] = i.message;
-    }
-    if (Object.keys(flat).length > 0) {
+      const flat: FieldErrors = {};
+      for (const i of caseResult.error.issues)
+        flat[`case.${String(i.path[0])}`] = i.message;
       setErrors(flat);
       toast.error("Controlla i campi evidenziati");
       return;
     }
 
-    if (!customerResult.success || !caseResult.success || !vehicleResult.success) return;
-
     setSaving(true);
     try {
-      if (caseData.customers?.id) {
-        const { error: custErr } = await supabase
-          .from("customers")
-          .update({
-            full_name: customerResult.data.full_name,
-            phone: customerResult.data.phone,
-            email: customerResult.data.email,
-          })
-          .eq("id", caseData.customers.id);
-        if (custErr) throw new Error(`Cliente: ${custErr.message}`);
-      }
-
-      let finalVehicleId: string | null = selectedVehicleId;
-      const vehicleData = vehicleResult.data;
-      if (vehicleData && caseData.customers?.id) {
-        if (selectedVehicleId) {
-          const { data: updated, error: vehErr } = await supabase
-            .from("vehicles")
-            .update(vehicleData)
-            .eq("id", selectedVehicleId)
-            .select()
-            .single();
-          if (vehErr) throw new Error(`Veicolo: ${vehErr.message}`);
-          if (updated) {
-            setVehicles((vs) => vs.map((v) => (v.id === updated.id ? updated : v)));
-          }
-        } else {
-          const { data: created, error: vehErr } = await supabase
-            .from("vehicles")
-            .insert({ ...vehicleData, customer_id: caseData.customers.id })
-            .select()
-            .single();
-          if (vehErr) throw new Error(`Veicolo: ${vehErr.message}`);
-          if (created) {
-            setVehicles((vs) => [...vs, created]);
-            finalVehicleId = created.id;
-            setSelectedVehicleId(created.id);
-          }
-        }
-      }
-
       const { data: updatedCase, error: caseErr } = await supabase
         .from("cases")
         .update({
           status: caseResult.data.status,
-          insurance_company: caseResult.data.insurance_company,
           description: caseResult.data.description,
           price: caseResult.data.price,
-          vehicle_id: finalVehicleId,
+          customer_id: selectedCustomerId,
+          vehicle_id: selectedVehicleId,
         })
         .eq("id", caseData.id)
         .select("*, customers(id, full_name, phone, email)")
@@ -250,23 +178,16 @@ export function CaseDetail({
 
   async function handleDeleteCase() {
     const photoCount = documents.filter((d) => d.mime_type?.startsWith("image/")).length;
-    const fileCount = documents.length - photoCount;
     const invoiceCount = invoices.length;
     const parts: string[] = [];
     if (photoCount > 0) parts.push(`${photoCount} ${photoCount === 1 ? "foto" : "foto"}`);
-    if (fileCount > 0) parts.push(`${fileCount} ${fileCount === 1 ? "file" : "file"}`);
-    if (invoiceCount > 0)
-      parts.push(`${invoiceCount} preventivi/fatture`);
-    if (notes.length > 0)
-      parts.push(`${notes.length} ${notes.length === 1 ? "nota" : "note"}`);
+    if (invoiceCount > 0) parts.push(`${invoiceCount} preventivi/fatture`);
 
     const detail =
-      parts.length > 0
-        ? `Verranno eliminati anche: ${parts.join(", ")}.\n\n`
-        : "";
+      parts.length > 0 ? `Verranno eliminati anche: ${parts.join(", ")}.\n\n` : "";
     const confirmed = await confirm({
       title: `Eliminare la pratica di ${
-        customerForm.full_name || "questo cliente"
+        selectedCustomer?.full_name || "questo cliente"
       }?`,
       description: `${detail}Azione irreversibile.`,
       confirmLabel: "Elimina pratica",
@@ -282,24 +203,19 @@ export function CaseDetail({
     router.push("/cases");
   }
 
+  const headerName = selectedCustomer?.full_name ?? "Pratica senza cliente";
+
   return (
     <div className="max-w-4xl mx-auto p-8 pb-40 sm:pb-32">
       <div className="sticky top-0 -mx-8 px-8 py-2 bg-bg/95 backdrop-blur z-20 border-b border-border/50 mb-4">
         <Breadcrumb
-          items={[
-            { label: "Pratiche", href: "/cases" },
-            {
-              label: customerForm.full_name || "Pratica senza cliente",
-            },
-          ]}
+          items={[{ label: "Pratiche", href: "/cases" }, { label: headerName }]}
         />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">
-            {customerForm.full_name || "Pratica senza cliente"}
-          </h1>
+          <h1 className="text-2xl font-semibold">{headerName}</h1>
           <div className="flex items-center gap-3 mt-2 text-sm text-text-muted flex-wrap">
             <span>Aperta il {formatDateTime(caseData.created_at)}</span>
             {caseData.updated_at !== caseData.created_at && (
@@ -313,7 +229,7 @@ export function CaseDetail({
         <div className="flex items-center gap-2">
           <NotifyButton
             caseId={caseData.id}
-            customerEmail={customerForm.email}
+            customerEmail={selectedCustomer?.email ?? null}
           />
           <button
             onClick={handleDeleteCase}
@@ -340,37 +256,16 @@ export function CaseDetail({
 
       <div className="card p-6 mb-5 space-y-6">
         <CustomerPanel
-          values={customerForm}
-          errors={{
-            full_name: errors["customer.full_name"],
-            phone: errors["customer.phone"],
-            email: errors["customer.email"],
-          }}
-          onChange={(patch) => {
-            setCustomerForm((f) => ({ ...f, ...patch }));
-            setDirty(true);
-            for (const k of Object.keys(patch) as string[]) clearError(`customer.${k}`);
-          }}
+          customers={initialCustomers}
+          selectedCustomerId={selectedCustomerId}
+          onSelect={handleSelectCustomer}
         />
 
         <VehiclePanel
-          values={vehicleForm}
-          errors={{
-            make: errors["vehicle.make"],
-            model: errors["vehicle.model"],
-            plate: errors["vehicle.plate"],
-            year: errors["vehicle.year"],
-            color: errors["vehicle.color"],
-            vin: errors["vehicle.vin"],
-          }}
-          onChange={(patch) => {
-            setVehicleForm((f) => ({ ...f, ...patch }));
-            setDirty(true);
-            for (const k of Object.keys(patch) as string[]) clearError(`vehicle.${k}`);
-          }}
-          vehicles={vehicles}
+          vehicles={customerVehicles}
           selectedVehicleId={selectedVehicleId}
-          onSelectVehicle={selectVehicle}
+          onSelect={handleSelectVehicle}
+          customerSelected={!!selectedCustomerId}
         />
 
         <CasePanel
@@ -399,10 +294,6 @@ export function CaseDetail({
 
       <div className="card p-5 mb-5">
         <InvoicesPanel caseId={caseData.id} invoices={invoices} />
-      </div>
-
-      <div className="card p-5 mb-5">
-        <NotesPanel caseId={caseData.id} notes={notes} onChange={setNotes} />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 sm:left-auto sm:right-8 sm:bottom-6 sm:inset-x-auto z-30 p-3 sm:p-0">
@@ -455,7 +346,8 @@ function CaseStatusTimeline({
                   isCurrent &&
                     "bg-accent border-accent text-white shadow-[0_0_0_4px_rgba(249,115,22,0.2)]",
                   isDone && "bg-accent/30 border-accent/60 text-accent",
-                  !isCurrent && !isDone &&
+                  !isCurrent &&
+                    !isDone &&
                     "bg-bg-hover border-border text-text-subtle hover:border-border-hover hover:text-text"
                 )}
                 aria-label={CASE_STATUS_LABELS[s]}

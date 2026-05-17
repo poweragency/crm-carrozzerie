@@ -20,11 +20,9 @@ export default async function CaseDetailPage({ params }: Props) {
 
   if (!caseData) notFound();
 
-  const customerId = caseData.customers?.id;
-
   const [
     { data: documents },
-    { data: notes },
+    { data: customers },
     { data: vehicles },
     { data: invoices },
   ] = await Promise.all([
@@ -34,17 +32,10 @@ export default async function CaseDetailPage({ params }: Props) {
       .eq("case_id", id)
       .order("created_at", { ascending: false }),
     supabase
-      .from("notes")
-      .select("*")
-      .eq("case_id", id)
-      .order("created_at", { ascending: false }),
-    customerId
-      ? supabase
-          .from("vehicles")
-          .select("*")
-          .eq("customer_id", customerId)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [] }),
+      .from("customers")
+      .select("id, full_name, phone, email")
+      .order("full_name", { ascending: true }),
+    supabase.from("vehicles").select("*").order("created_at", { ascending: true }),
     supabase
       .from("invoices")
       .select("*")
@@ -56,7 +47,7 @@ export default async function CaseDetailPage({ params }: Props) {
     <CaseDetail
       initialCase={caseData}
       initialDocuments={documents ?? []}
-      initialNotes={notes ?? []}
+      initialCustomers={customers ?? []}
       initialVehicles={vehicles ?? []}
       initialInvoices={invoices ?? []}
     />

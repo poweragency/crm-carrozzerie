@@ -1,45 +1,69 @@
 "use client";
 
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { Field, Section } from "./Field";
-import type { CustomerFormValues } from "@/lib/schemas";
 
-interface Props {
-  values: CustomerFormValues;
-  errors?: Partial<Record<keyof CustomerFormValues, string>>;
-  onChange: (patch: Partial<CustomerFormValues>) => void;
+export interface CustomerOption {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
 }
 
-export function CustomerPanel({ values, errors, onChange }: Props) {
+interface Props {
+  customers: CustomerOption[];
+  selectedCustomerId: string | null;
+  onSelect: (id: string | null) => void;
+}
+
+export function CustomerPanel({ customers, selectedCustomerId, onSelect }: Props) {
+  const selected = customers.find((c) => c.id === selectedCustomerId) ?? null;
+
   return (
-    <Section title="Cliente">
-      <Field label="Nome e cognome *" htmlFor="customer-name" error={errors?.full_name}>
-        <input
-          id="customer-name"
-          value={values.full_name}
-          onChange={(e) => onChange({ full_name: e.target.value })}
+    <Section title="Cliente" description="Seleziona un cliente esistente dalla rubrica.">
+      <Field label="Cliente">
+        <select
+          value={selectedCustomerId ?? ""}
+          onChange={(e) => onSelect(e.target.value || null)}
           className="input-base"
-        />
+        >
+          <option value="" disabled>
+            — Seleziona cliente —
+          </option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.full_name}
+            </option>
+          ))}
+        </select>
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Telefono" htmlFor="customer-phone" error={errors?.phone}>
-          <input
-            id="customer-phone"
-            type="tel"
-            value={values.phone ?? ""}
-            onChange={(e) => onChange({ phone: e.target.value || null })}
-            className="input-base"
-          />
-        </Field>
-        <Field label="Email" htmlFor="customer-email" error={errors?.email}>
-          <input
-            id="customer-email"
-            type="email"
-            value={values.email ?? ""}
-            onChange={(e) => onChange({ email: e.target.value || null })}
-            className="input-base"
-          />
-        </Field>
-      </div>
+
+      {selected && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-text-subtle mb-1">
+              Telefono
+            </div>
+            <div className="text-sm">{selected.phone || "—"}</div>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-text-subtle mb-1">
+              Email
+            </div>
+            <div className="text-sm truncate">{selected.email || "—"}</div>
+          </div>
+        </div>
+      )}
+
+      {selected && (
+        <Link
+          href={`/customers/${selected.id}`}
+          className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+        >
+          Apri scheda cliente <ExternalLink className="w-3 h-3" />
+        </Link>
+      )}
     </Section>
   );
 }

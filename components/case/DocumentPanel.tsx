@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, ImageIcon, Trash2, Download, Upload, Camera } from "lucide-react";
+import { ImageIcon, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { formatDateTime, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/image";
 import { PhotoGallery } from "./PhotoGallery";
 import { useConfirm } from "../ConfirmDialog";
@@ -37,13 +37,14 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
   }, []);
 
   const photos = useMemo(() => documents.filter(isImage), [documents]);
-  const files = useMemo(() => documents.filter((d) => !isImage(d)), [documents]);
 
   async function uploadFiles(inputFiles: FileList | null) {
     if (!inputFiles || inputFiles.length === 0) return;
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Sessione scaduta, ricarica la pagina");
         return;
@@ -85,7 +86,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
         toast.success(
           uploaded.length === 1
             ? `${uploaded[0].file_name} caricato`
-            : `${uploaded.length} file caricati`
+            : `${uploaded.length} foto caricate`
         );
       }
     } finally {
@@ -97,7 +98,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
 
   async function handleDelete(doc: Document) {
     const ok = await confirm({
-      title: "Eliminare il file?",
+      title: "Eliminare la foto?",
       description: doc.file_name,
       confirmLabel: "Elimina",
       variant: "danger",
@@ -110,14 +111,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
       return;
     }
     onChange(documents.filter((d) => d.id !== doc.id));
-    toast.success("File eliminato");
-  }
-
-  async function handleDownload(doc: Document) {
-    const { data } = await supabase.storage
-      .from("documents")
-      .createSignedUrl(doc.file_path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    toast.success("Foto eliminata");
   }
 
   return (
@@ -134,9 +128,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
             disabled={uploading || !hasCamera}
             className={cn(
               "py-1.5",
-              hasCamera
-                ? "btn-primary"
-                : "btn-secondary opacity-50 cursor-not-allowed"
+              hasCamera ? "btn-primary" : "btn-secondary opacity-50 cursor-not-allowed"
             )}
             type="button"
             title={
@@ -159,7 +151,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
             type="button"
           >
             <Upload className="w-3.5 h-3.5" />
-            Carica file
+            Carica foto
           </button>
           <input
             ref={cameraRef}
@@ -175,63 +167,12 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
             multiple
             onChange={(e) => uploadFiles(e.target.files)}
             className="hidden"
-            accept="image/*,application/pdf"
+            accept="image/*"
           />
         </div>
       </div>
 
       <PhotoGallery photos={photos} onDelete={handleDelete} />
-
-      <div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
-          <FileText className="w-3.5 h-3.5" />
-          Altri documenti
-          <span className="text-text-subtle">({files.length})</span>
-        </div>
-        {files.length === 0 ? (
-          <div className="text-center text-xs text-text-subtle py-4">
-            Nessun PDF allegato.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {files.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center gap-3 p-2.5 rounded-md bg-bg-hover/50 border border-border hover:bg-bg-hover transition-colors"
-              >
-                <div className="w-9 h-9 rounded bg-bg-card flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-text-muted" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium truncate" title={d.file_name}>
-                    {d.file_name}
-                  </div>
-                  <div className="text-[10px] text-text-subtle">
-                    {d.file_size ? `${Math.round(d.file_size / 1024)} KB` : ""} ·{" "}
-                    {formatDateTime(d.created_at)}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload(d)}
-                  className="text-text-subtle hover:text-text"
-                  title="Scarica"
-                  type="button"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(d)}
-                  className="text-text-subtle hover:text-red-400"
-                  title="Elimina"
-                  type="button"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
