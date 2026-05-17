@@ -111,6 +111,8 @@ export type Database = {
       };
       cases: {
         Row: {
+          archived_at: string | null;
+          archived_reason: string | null;
           created_at: string;
           customer_id: string;
           description: string | null;
@@ -123,6 +125,8 @@ export type Database = {
           vehicle_id: string | null;
         };
         Insert: {
+          archived_at?: string | null;
+          archived_reason?: string | null;
           created_at?: string;
           customer_id: string;
           description?: string | null;
@@ -135,6 +139,8 @@ export type Database = {
           vehicle_id?: string | null;
         };
         Update: {
+          archived_at?: string | null;
+          archived_reason?: string | null;
           created_at?: string;
           customer_id?: string;
           description?: string | null;

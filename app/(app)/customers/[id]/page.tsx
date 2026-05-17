@@ -22,7 +22,7 @@ export default async function CustomerDetailPage({ params }: Props) {
     supabase
       .from("cases")
       .select(
-        "id, status, price, insurance_company, description, created_at, updated_at, vehicles(make, model, plate)"
+        "id, status, price, insurance_company, description, created_at, updated_at, archived_at, vehicles(make, model, plate)"
       )
       .eq("customer_id", id)
       .order("created_at", { ascending: false }),

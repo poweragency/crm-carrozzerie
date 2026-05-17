@@ -75,6 +75,7 @@ export default async function DashboardPage() {
       .select(
         "id, status, price, created_at, customers(full_name), vehicles(make, model, plate)"
       )
+      .is("archived_at", null)
       .order("created_at", { ascending: false })
       .limit(5),
     (() => {

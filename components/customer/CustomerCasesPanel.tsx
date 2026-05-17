@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FolderKanban, History, ChevronRight } from "lucide-react";
+import { FolderKanban, History, ChevronRight, Archive } from "lucide-react";
 import { CASE_STATUS_LABELS, CASE_STATUS_COLORS } from "@/lib/constants";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -19,6 +19,7 @@ export interface CustomerCase {
   description: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
   vehicles: {
     make: string | null;
     model: string | null;
@@ -26,85 +27,80 @@ export interface CustomerCase {
   } | null;
 }
 
-type Tab = "open" | "history";
+type Tab = "open" | "incomplete" | "history";
 
 export function CustomerCasesPanel({ cases }: { cases: CustomerCase[] }) {
   const [tab, setTab] = useState<Tab>("open");
 
-  const { open, history } = useMemo(() => {
-    return {
-      open: cases.filter((c) => OPEN_STATUSES.includes(c.status)),
-      history: cases
-        .filter((c) => CLOSED_STATUSES.includes(c.status))
-        .sort(
-          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        ),
-    };
+  const { open, incomplete, history } = useMemo(() => {
+    const open = cases.filter((c) => !c.archived_at && OPEN_STATUSES.includes(c.status));
+    const incomplete = cases
+      .filter((c) => !!c.archived_at)
+      .sort(
+        (a, b) =>
+          new Date(b.archived_at as string).getTime() -
+          new Date(a.archived_at as string).getTime()
+      );
+    const history = cases
+      .filter((c) => !c.archived_at && CLOSED_STATUSES.includes(c.status))
+      .sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    return { open, incomplete, history };
   }, [cases]);
 
-  const list = tab === "open" ? open : history;
+  const list = tab === "open" ? open : tab === "incomplete" ? incomplete : history;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-text-muted uppercase tracking-wide">
           <FolderKanban className="w-3.5 h-3.5" />
           Pratiche
         </div>
         <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
-          <button
-            type="button"
+          <TabButton
+            active={tab === "open"}
             onClick={() => setTab("open")}
-            className={cn(
-              "px-3 py-1.5 transition-colors inline-flex items-center gap-1.5",
-              tab === "open"
-                ? "bg-accent/10 text-accent"
-                : "text-text-muted hover:text-text hover:bg-bg-hover"
-            )}
-          >
-            <FolderKanban className="w-3 h-3" />
-            In corso
-            <span
-              className={cn(
-                "tabular-nums text-[10px] rounded-full px-1.5",
-                tab === "open" ? "bg-accent/20" : "bg-bg-hover text-text-subtle"
-              )}
-            >
-              {open.length}
-            </span>
-          </button>
-          <button
-            type="button"
+            icon={<FolderKanban className="w-3 h-3" />}
+            label="In corso"
+            count={open.length}
+          />
+          <TabButton
+            active={tab === "incomplete"}
+            onClick={() => setTab("incomplete")}
+            icon={<Archive className="w-3 h-3" />}
+            label="Incomplete"
+            count={incomplete.length}
+            borderLeft
+          />
+          <TabButton
+            active={tab === "history"}
             onClick={() => setTab("history")}
-            className={cn(
-              "px-3 py-1.5 transition-colors inline-flex items-center gap-1.5 border-l border-border",
-              tab === "history"
-                ? "bg-accent/10 text-accent"
-                : "text-text-muted hover:text-text hover:bg-bg-hover"
-            )}
-          >
-            <History className="w-3 h-3" />
-            Pratiche passate
-            <span
-              className={cn(
-                "tabular-nums text-[10px] rounded-full px-1.5",
-                tab === "history" ? "bg-accent/20" : "bg-bg-hover text-text-subtle"
-              )}
-            >
-              {history.length}
-            </span>
-          </button>
+            icon={<History className="w-3 h-3" />}
+            label="Passate"
+            count={history.length}
+            borderLeft
+          />
         </div>
       </div>
 
       {list.length === 0 ? (
         <EmptyState
-          icon={tab === "open" ? FolderKanban : History}
-          title={tab === "open" ? "Nessuna pratica in corso" : "Nessuna pratica passata"}
+          icon={tab === "open" ? FolderKanban : tab === "incomplete" ? Archive : History}
+          title={
+            tab === "open"
+              ? "Nessuna pratica in corso"
+              : tab === "incomplete"
+                ? "Nessuna pratica incompleta"
+                : "Nessuna pratica passata"
+          }
           description={
             tab === "open"
               ? "Le pratiche aperte di questo cliente appariranno qui."
-              : "Lo storico mostra solo pratiche completate o consegnate."
+              : tab === "incomplete"
+                ? "Le pratiche archiviate (es. dopo l'eliminazione di un lead) appariranno qui e potranno essere riprese."
+                : "Lo storico mostra solo pratiche completate o consegnate."
           }
         />
       ) : (
@@ -120,10 +116,13 @@ export function CustomerCasesPanel({ cases }: { cases: CustomerCase[] }) {
                 <Link
                   key={c.id}
                   href={`/cases/${c.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-bg-hover transition-colors"
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 hover:bg-bg-hover transition-colors",
+                    tab === "incomplete" && "opacity-80"
+                  )}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span
                         className={cn(
                           "text-[10px] font-medium px-1.5 py-0.5 rounded",
@@ -133,10 +132,18 @@ export function CustomerCasesPanel({ cases }: { cases: CustomerCase[] }) {
                       >
                         {CASE_STATUS_LABELS[c.status]}
                       </span>
+                      {tab === "incomplete" && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400 inline-flex items-center gap-1">
+                          <Archive className="w-2.5 h-2.5" />
+                          Incompleta
+                        </span>
+                      )}
                       <span className="text-[11px] text-text-subtle">
                         {tab === "history"
                           ? `Chiusa ${formatDate(c.updated_at)}`
-                          : `Aperta ${formatDate(c.created_at)}`}
+                          : tab === "incomplete"
+                            ? `Archiviata ${formatDate(c.archived_at as string)}`
+                            : `Aperta ${formatDate(c.created_at)}`}
                       </span>
                     </div>
                     <div className="text-sm mt-1 truncate text-text-muted">
@@ -159,5 +166,46 @@ export function CustomerCasesPanel({ cases }: { cases: CustomerCase[] }) {
         </div>
       )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+  borderLeft,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  borderLeft?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-3 py-1.5 transition-colors inline-flex items-center gap-1.5",
+        borderLeft && "border-l border-border",
+        active
+          ? "bg-accent/10 text-accent"
+          : "text-text-muted hover:text-text hover:bg-bg-hover"
+      )}
+    >
+      {icon}
+      {label}
+      <span
+        className={cn(
+          "tabular-nums text-[10px] rounded-full px-1.5",
+          active ? "bg-accent/20" : "bg-bg-hover text-text-subtle"
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }

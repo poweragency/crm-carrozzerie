@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2 } from "lucide-react";
+import { Archive, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Breadcrumb } from "./ui/Breadcrumb";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -185,6 +185,21 @@ export function CaseDetail({
     }
   }
 
+  async function handleRestore() {
+    const { data: updated, error } = await supabase
+      .from("cases")
+      .update({ archived_at: null, archived_reason: null })
+      .eq("id", caseData.id)
+      .select("*, customers(id, full_name, phone, email)")
+      .single();
+    if (error) {
+      toast.error("Ripristino fallito", { description: error.message });
+      return;
+    }
+    if (updated) setCaseData(updated as CaseWithCustomer);
+    toast.success("Pratica ripresa");
+  }
+
   async function handleDeleteCase() {
     const photoCount = documents.filter((d) => d.mime_type?.startsWith("image/")).length;
     const invoiceCount = invoices.length;
@@ -249,6 +264,31 @@ export function CaseDetail({
           </button>
         </div>
       </div>
+
+      {caseData.archived_at && (
+        <div className="card p-4 mb-5 bg-yellow-500/5 border-yellow-500/30 flex items-start gap-3">
+          <Archive className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-yellow-400">
+              Pratica incompleta
+            </div>
+            <p className="text-xs text-text-muted mt-0.5">
+              {caseData.archived_reason === "lead_deleted"
+                ? "Questa pratica è stata archiviata perché il lead di origine è stato eliminato. I dati (foto, preventivi, fatture) sono intatti."
+                : "Questa pratica è archiviata. I dati sono intatti."}{" "}
+              Riprendila per tornare a lavorarci.
+            </p>
+          </div>
+          <button
+            onClick={handleRestore}
+            type="button"
+            className="btn-secondary py-1.5 shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Riprendi
+          </button>
+        </div>
+      )}
 
       <div className="card p-4 mb-5">
         <div className="text-xs uppercase tracking-wide text-text-subtle mb-3 font-semibold">
