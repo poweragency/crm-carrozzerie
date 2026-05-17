@@ -16,10 +16,13 @@ import { CasePanel } from "./case/CasePanel";
 import { DocumentPanel } from "./case/DocumentPanel";
 import { InvoicesPanel } from "./case/InvoicesPanel";
 import { NotifyButton } from "./case/NotifyButton";
+import { CustomerFormModal } from "./customer/CustomerFormModal";
+import { VehicleFormModal } from "./customer/VehicleFormModal";
 import { useConfirm } from "./ConfirmDialog";
 import type {
   Case,
   CaseStatus,
+  Customer,
   Document,
   Invoice,
   Vehicle,
@@ -59,6 +62,9 @@ export function CaseDetail({
   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
   const invoices = initialInvoices;
 
+  const [customers, setCustomers] = useState<CustomerOption[]>(initialCustomers);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     initialCase.customer_id ?? initialCase.customers?.id ?? null
   );
@@ -66,17 +72,20 @@ export function CaseDetail({
     initialCase.vehicle_id
   );
 
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+
   const customerVehicles = useMemo(
     () =>
       selectedCustomerId
-        ? initialVehicles.filter((v) => v.customer_id === selectedCustomerId)
+        ? vehicles.filter((v) => v.customer_id === selectedCustomerId)
         : [],
-    [initialVehicles, selectedCustomerId]
+    [vehicles, selectedCustomerId]
   );
 
   const selectedCustomer = useMemo(
-    () => initialCustomers.find((c) => c.id === selectedCustomerId) ?? null,
-    [initialCustomers, selectedCustomerId]
+    () => customers.find((c) => c.id === selectedCustomerId) ?? null,
+    [customers, selectedCustomerId]
   );
 
   const [caseForm, setCaseForm] = useState<CaseFormInputValues>({
@@ -256,9 +265,10 @@ export function CaseDetail({
 
       <div className="card p-6 mb-5 space-y-6">
         <CustomerPanel
-          customers={initialCustomers}
+          customers={customers}
           selectedCustomerId={selectedCustomerId}
           onSelect={handleSelectCustomer}
+          onCreateNew={() => setShowCustomerModal(true)}
         />
 
         <VehiclePanel
@@ -266,6 +276,7 @@ export function CaseDetail({
           selectedVehicleId={selectedVehicleId}
           onSelect={handleSelectVehicle}
           customerSelected={!!selectedCustomerId}
+          onCreateNew={() => setShowVehicleModal(true)}
         />
 
         <CasePanel
@@ -318,6 +329,35 @@ export function CaseDetail({
           </button>
         </div>
       </div>
+
+      {showCustomerModal && (
+        <CustomerFormModal
+          onClose={() => setShowCustomerModal(false)}
+          onSaved={(c: Customer) => {
+            setCustomers((prev) => [
+              ...prev,
+              { id: c.id, full_name: c.full_name, phone: c.phone, email: c.email },
+            ]);
+            setSelectedCustomerId(c.id);
+            setSelectedVehicleId(null);
+            setDirty(true);
+            setShowCustomerModal(false);
+          }}
+        />
+      )}
+
+      {showVehicleModal && selectedCustomerId && (
+        <VehicleFormModal
+          customerId={selectedCustomerId}
+          onClose={() => setShowVehicleModal(false)}
+          onSaved={(v) => {
+            setVehicles((prev) => [...prev, v]);
+            setSelectedVehicleId(v.id);
+            setDirty(true);
+            setShowVehicleModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

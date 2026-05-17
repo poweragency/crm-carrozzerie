@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { Field, Section } from "./Field";
 import type { Vehicle } from "@/types/database.types";
 
@@ -8,6 +9,7 @@ interface Props {
   selectedVehicleId: string | null;
   onSelect: (id: string | null) => void;
   customerSelected: boolean;
+  onCreateNew: () => void;
 }
 
 function label(v: Vehicle): string {
@@ -19,6 +21,7 @@ export function VehiclePanel({
   selectedVehicleId,
   onSelect,
   customerSelected,
+  onCreateNew,
 }: Props) {
   const selected = vehicles.find((v) => v.id === selectedVehicleId) ?? null;
 
@@ -34,21 +37,37 @@ export function VehiclePanel({
       }
     >
       <Field label="Veicolo collegato">
-        <select
-          value={selectedVehicleId ?? ""}
-          onChange={(e) => onSelect(e.target.value || null)}
-          className="input-base"
-          disabled={!customerSelected || vehicles.length === 0}
-        >
-          <option value="">
-            {vehicles.length === 0 ? "— Nessun veicolo —" : "— Nessuno —"}
-          </option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>
-              {label(v)}
+        <div className="flex gap-2">
+          <select
+            value={selectedVehicleId ?? ""}
+            onChange={(e) => onSelect(e.target.value || null)}
+            className="input-base flex-1"
+            disabled={!customerSelected || vehicles.length === 0}
+          >
+            <option value="">
+              {vehicles.length === 0 ? "— Nessun veicolo —" : "— Nessuno —"}
             </option>
-          ))}
-        </select>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {label(v)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onCreateNew}
+            disabled={!customerSelected}
+            className="btn-secondary py-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              customerSelected
+                ? "Aggiungi un veicolo a questo cliente"
+                : "Seleziona prima un cliente"
+            }
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nuovo
+          </button>
+        </div>
       </Field>
 
       {selected && (

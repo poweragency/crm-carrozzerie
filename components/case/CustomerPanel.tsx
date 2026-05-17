@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 import { Field, Section } from "./Field";
 
 export interface CustomerOption {
@@ -15,46 +15,46 @@ interface Props {
   customers: CustomerOption[];
   selectedCustomerId: string | null;
   onSelect: (id: string | null) => void;
+  onCreateNew: () => void;
 }
 
-export function CustomerPanel({ customers, selectedCustomerId, onSelect }: Props) {
+export function CustomerPanel({
+  customers,
+  selectedCustomerId,
+  onSelect,
+  onCreateNew,
+}: Props) {
   const selected = customers.find((c) => c.id === selectedCustomerId) ?? null;
 
   return (
     <Section title="Cliente" description="Seleziona un cliente esistente dalla rubrica.">
       <Field label="Cliente">
-        <select
-          value={selectedCustomerId ?? ""}
-          onChange={(e) => onSelect(e.target.value || null)}
-          className="input-base"
-        >
-          <option value="" disabled>
-            — Seleziona cliente —
-          </option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.full_name}
+        <div className="flex gap-2">
+          <select
+            value={selectedCustomerId ?? ""}
+            onChange={(e) => onSelect(e.target.value || null)}
+            className="input-base flex-1"
+          >
+            <option value="" disabled>
+              — Seleziona cliente —
             </option>
-          ))}
-        </select>
-      </Field>
-
-      {selected && (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-text-subtle mb-1">
-              Telefono
-            </div>
-            <div className="text-sm">{selected.phone || "—"}</div>
-          </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-text-subtle mb-1">
-              Email
-            </div>
-            <div className="text-sm truncate">{selected.email || "—"}</div>
-          </div>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.full_name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onCreateNew}
+            className="btn-secondary py-1.5 shrink-0"
+            title="Crea un nuovo cliente"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nuovo
+          </button>
         </div>
-      )}
+      </Field>
 
       {selected && (
         <Link
