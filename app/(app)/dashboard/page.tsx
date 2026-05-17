@@ -64,7 +64,7 @@ export default async function DashboardPage() {
     supabase
       .from("profiles")
       .select(
-        "workshop_name, role, workshop:workshops(name, vat_number, address, iban, fb_page_id)"
+        "full_name, role, workshop:workshops(name, vat_number, address, iban, fb_page_id)"
       )
       .eq("id", user!.id)
       .single(),
@@ -150,7 +150,6 @@ export default async function DashboardPage() {
     },
   ];
 
-  const workshopName = profile?.workshop_name ?? "tua officina";
   const isOwner = (profile?.role ?? "owner") === "owner";
   const showRevenue = isOwner;
 
@@ -158,6 +157,7 @@ export default async function DashboardPage() {
   const ws = (
     profile as unknown as {
       workshop?: {
+        name: string;
         vat_number: string | null;
         address: string | null;
         iban: string | null;
@@ -165,6 +165,13 @@ export default async function DashboardPage() {
       } | null;
     }
   )?.workshop;
+
+  // Greeting: per gli staff usa il loro nome ("Ciao, Mario"); per owner
+  // usa il nome dell'officina ("Ciao, Carrozzeria Rossi"). Mai più il
+  // legacy profile.workshop_name (che per staff era 'La mia carrozzeria').
+  const greetingName = isOwner
+    ? (ws?.name ?? "la tua officina")
+    : profile?.full_name?.trim() || ws?.name || "";
   const profileDone = !!(ws?.vat_number && ws?.address && ws?.iban);
   const fbDone = !!ws?.fb_page_id;
   const onboardingComplete = profileDone && fbDone;
@@ -173,7 +180,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Ciao, {workshopName} 👋</h1>
+        <h1 className="text-2xl font-semibold">Ciao, {greetingName} 👋</h1>
         <p className="text-sm text-text-muted mt-1">
           {totalCases === 0
             ? "Iniziamo: aggiungi il primo lead o crea una pratica manuale."

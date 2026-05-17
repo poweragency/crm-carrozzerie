@@ -14,9 +14,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("workshop_name, full_name, logo_url, role")
+    .select("role, full_name, workshop:workshops(name, logo_url)")
     .eq("id", user.id)
     .single();
+
+  // Nome e logo del workshop reale (fonte di verità), non più del campo
+  // legacy su profiles che per gli staff resta sul default 'La mia carrozzeria'.
+  const ws = (
+    profile as unknown as {
+      workshop?: { name: string; logo_url: string | null } | null;
+    }
+  )?.workshop;
 
   const isAdmin = user.app_metadata?.is_admin === true;
   const role = profile?.role ?? "owner";
@@ -27,8 +35,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppShell
         userId={user.id}
         userEmail={user.email ?? ""}
-        workshopName={profile?.workshop_name ?? "La mia carrozzeria"}
-        logoUrl={profile?.logo_url ?? null}
+        workshopName={ws?.name ?? "La mia carrozzeria"}
+        logoUrl={ws?.logo_url ?? null}
         isAdmin={isAdmin}
         role={role}
       >
