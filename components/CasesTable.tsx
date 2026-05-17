@@ -434,6 +434,14 @@ function NewCaseModal({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
     (async () => {
       const [{ data: cs }, { data: vs }] = await Promise.all([
         supabase.from("customers").select("*").order("full_name", { ascending: true }),
