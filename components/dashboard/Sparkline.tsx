@@ -16,14 +16,19 @@ export function Sparkline({ data, stroke = "currentColor", height = 28 }: Props)
   }
 
   const width = 100; // viewbox unit
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data, 0);
-  const range = max - min || 1;
+  // Asse Y dal minimo REALE dei dati (non da 0): le serie cumulative
+  // partono spesso da una base storica e con il vecchio floor a 0 la
+  // crescita interna alla finestra restava compressa contro il bordo
+  // alto. Una serie piatta finisce comunque sul bordo basso, che è
+  // un segnale visivo onesto di "nessuna nuova attività".
+  const dataMin = Math.min(...data);
+  const max = Math.max(...data, dataMin + 1);
+  const range = max - dataMin || 1;
   const stepX = width / (data.length - 1);
 
   const points = data.map((v, i) => {
     const x = i * stepX;
-    const y = height - ((v - min) / range) * height;
+    const y = height - ((v - dataMin) / range) * height;
     return [x, y] as const;
   });
 
