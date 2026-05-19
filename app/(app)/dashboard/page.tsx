@@ -275,9 +275,9 @@ export default async function DashboardPage() {
         {showRevenue ? (
           <div className="card p-5 lg:col-span-2 hover:shadow-card-hover transition-all">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold">Fatturato 30 giorni</h2>
+              <h2 className="text-sm font-semibold">Fatturato incassato</h2>
               <span className="text-[11px] text-text-subtle">
-                Totale {formatCurrency(revenueDaily.reduce((a, b) => a + b, 0))}
+                Totale {formatCurrency(revenueDaily[revenueDaily.length - 1] ?? 0)}
               </span>
             </div>
             <RevenueChart data={revenueDaily} />

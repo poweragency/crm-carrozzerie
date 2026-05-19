@@ -13,12 +13,24 @@ export function RevenueChart({ data }: Props) {
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
-  const max = Math.max(...data, 1);
+  // Dati cumulativi: revenue_daily è ora il totale incassato fino a
+  // quel giorno (vedi migration 20260519210000). La linea quindi cresce
+  // a gradini quando arriva un incasso e non torna mai a zero.
+  const first = data[0] ?? 0;
+  const today = data[data.length - 1] ?? 0;
+  const deltaPeriod = today - first;
+
+  // Asse Y: parte dal valore iniziale (base storica) per dare risalto
+  // alla crescita nella finestra, non da 0. Se non c'è base, parte da 0
+  // come prima.
+  const yMin = first;
+  const yMax = Math.max(today, yMin + 1);
+  const yRange = Math.max(yMax - yMin, 1);
   const stepX = chartW / Math.max(data.length - 1, 1);
 
   const points = data.map((v, i) => {
     const x = padding.left + i * stepX;
-    const y = padding.top + chartH - (v / max) * chartH;
+    const y = padding.top + chartH - ((v - yMin) / yRange) * chartH;
     return [x, y] as const;
   });
 
@@ -27,9 +39,12 @@ export function RevenueChart({ data }: Props) {
     .join(" ");
   const areaD = `${lineD} L${padding.left + chartW},${padding.top + chartH} L${padding.left},${padding.top + chartH} Z`;
 
-  const total = data.reduce((a, b) => a + b, 0);
-  const avg = total / data.length;
-  const today = data[data.length - 1] ?? 0;
+  // Massima crescita in un singolo giorno (= picco di incasso).
+  let bestDay = 0;
+  for (let i = 1; i < data.length; i++) {
+    const d = data[i] - data[i - 1];
+    if (d > bestDay) bestDay = d;
+  }
 
   // Date labels (oggi, -15gg, -30gg)
   const now = new Date();
@@ -124,16 +139,20 @@ export function RevenueChart({ data }: Props) {
       </svg>
       <div className="grid grid-cols-3 gap-2 mt-3 text-center">
         <div>
-          <div className="text-[10px] uppercase text-text-subtle">Oggi</div>
+          <div className="text-[10px] uppercase text-text-subtle">Totale a oggi</div>
           <div className="text-xs font-medium tabular-nums">{formatCurrency(today)}</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase text-text-subtle">Media/giorno</div>
-          <div className="text-xs font-medium tabular-nums">{formatCurrency(avg)}</div>
+          <div className="text-[10px] uppercase text-text-subtle">Nel periodo</div>
+          <div className="text-xs font-medium tabular-nums">
+            {formatCurrency(deltaPeriod)}
+          </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase text-text-subtle">Picco</div>
-          <div className="text-xs font-medium tabular-nums">{formatCurrency(max)}</div>
+          <div className="text-[10px] uppercase text-text-subtle">Picco giorno</div>
+          <div className="text-xs font-medium tabular-nums">
+            {formatCurrency(bestDay)}
+          </div>
         </div>
       </div>
     </div>
