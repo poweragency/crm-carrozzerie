@@ -3,23 +3,11 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CASE_STATUS_LABELS } from "@/lib/constants";
+import { CASE_NOTIFY_MESSAGES } from "@/lib/notify-messages";
 import type { CaseStatus } from "@/types/database.types";
 import { rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({ case_id: z.string().uuid() });
-
-const STATUS_MESSAGES: Record<CaseStatus, string> = {
-  preventivo:
-    "Stiamo preparando il preventivo per la riparazione del Suo veicolo. La contatteremo a breve con i dettagli.",
-  attesa_pezzi:
-    "Abbiamo ordinato i pezzi necessari per la riparazione. La avviseremo non appena saranno disponibili.",
-  lavorazione:
-    "Il Suo veicolo è entrato in lavorazione. Le scriveremo non appena la riparazione sarà completata.",
-  completata:
-    "La riparazione del Suo veicolo è completata. Può venire a ritirarlo negli orari di apertura dell'officina.",
-  consegnata:
-    "Confermiamo la consegna del Suo veicolo. La ringraziamo per averci scelto e restiamo a disposizione per future esigenze.",
-};
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -27,6 +15,21 @@ export async function POST(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  // Solo owner (o admin) puo' inviare notifiche al cliente: lo staff
+  // non ha visibilita' sui canali comunicazione cliente.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = user.app_metadata?.is_admin === true;
+  if (!isAdmin && profile?.role !== "owner") {
+    return NextResponse.json(
+      { sent: false, error: "Operazione riservata al titolare dell'officina." },
+      { status: 403 }
+    );
+  }
 
   // 10 email/min per utente per evitare spam o abuse della tab Notifica
   const rl = rateLimit(`notify-status:${user.id}`, { windowMs: 60_000, max: 10 });
@@ -118,7 +121,7 @@ export async function POST(req: NextRequest) {
   const text = [
     `Buongiorno ${customer.full_name},`,
     "",
-    STATUS_MESSAGES[status],
+    CASE_NOTIFY_MESSAGES[status],
     "",
     vehicleDescr ? `Riferimento veicolo: ${vehicleDescr}` : null,
     workshopEmail ? `Per rispondere scriva a: ${workshopEmail}` : null,

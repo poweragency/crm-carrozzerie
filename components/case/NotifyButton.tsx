@@ -3,16 +3,28 @@
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "sonner";
-import type { CaseStatus } from "@/types/database.types";
+import type { CaseStatus, UserRole } from "@/types/database.types";
 
 interface Props {
   caseId: string;
   customerEmail: string | null;
   caseStatus: CaseStatus;
+  role: UserRole;
+  isAdmin?: boolean;
 }
 
-export function NotifyButton({ caseId, customerEmail, caseStatus }: Props) {
+export function NotifyButton({
+  caseId,
+  customerEmail,
+  caseStatus,
+  role,
+  isAdmin = false,
+}: Props) {
   const [sending, setSending] = useState(false);
+
+  // Solo owner/admin: lo staff non vede il pulsante (anche la route lato
+  // server rifiuta).
+  if (!isAdmin && role !== "owner") return null;
 
   const isCompleted = caseStatus === "completata";
   const hasEmail = !!customerEmail;
@@ -80,7 +92,7 @@ export function NotifyButton({ caseId, customerEmail, caseStatus }: Props) {
       title={tooltip}
     >
       <Mail className="w-4 h-4" />
-      {sending ? "Invio..." : "Notifica cliente"}
+      {sending ? "Invio..." : "Notifica cliente via mail"}
     </button>
   );
 }

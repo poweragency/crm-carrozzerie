@@ -12,6 +12,10 @@ export default async function CaseDetailPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data: caseData } = await supabase
     .from("cases")
     .select("*, customers(id, full_name, phone, email)")
@@ -25,6 +29,7 @@ export default async function CaseDetailPage({ params }: Props) {
     { data: customers },
     { data: vehicles },
     { data: invoices },
+    { data: profile },
   ] = await Promise.all([
     supabase
       .from("documents")
@@ -41,7 +46,23 @@ export default async function CaseDetailPage({ params }: Props) {
       .select("*")
       .eq("case_id", id)
       .order("created_at", { ascending: false }),
+    user
+      ? supabase
+          .from("profiles")
+          .select("role, workshop:workshops(name)")
+          .eq("id", user.id)
+          .single()
+      : Promise.resolve({ data: null }),
   ]);
+
+  const role = profile?.role ?? "owner";
+  const isAdmin = user?.app_metadata?.is_admin === true;
+  const workshopName =
+    (
+      profile as unknown as {
+        workshop?: { name: string } | null;
+      } | null
+    )?.workshop?.name ?? null;
 
   return (
     <CaseDetail
@@ -50,6 +71,9 @@ export default async function CaseDetailPage({ params }: Props) {
       initialCustomers={customers ?? []}
       initialVehicles={vehicles ?? []}
       initialInvoices={invoices ?? []}
+      role={role}
+      isAdmin={isAdmin}
+      workshopName={workshopName}
     />
   );
 }

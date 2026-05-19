@@ -16,6 +16,7 @@ import { CasePanel } from "./case/CasePanel";
 import { DocumentPanel } from "./case/DocumentPanel";
 import { InvoicesPanel } from "./case/InvoicesPanel";
 import { NotifyButton } from "./case/NotifyButton";
+import { NotifyWhatsAppButton } from "./case/NotifyWhatsAppButton";
 import { CustomerFormModal } from "./customer/CustomerFormModal";
 import { VehicleFormModal } from "./customer/VehicleFormModal";
 import { useConfirm } from "./ConfirmDialog";
@@ -25,6 +26,7 @@ import type {
   Customer,
   Document,
   Invoice,
+  UserRole,
   Vehicle,
 } from "@/types/database.types";
 
@@ -43,6 +45,9 @@ interface Props {
   initialCustomers: CustomerOption[];
   initialVehicles: Vehicle[];
   initialInvoices: Invoice[];
+  role: UserRole;
+  isAdmin: boolean;
+  workshopName: string | null;
 }
 
 type FieldErrors = Record<string, string>;
@@ -53,6 +58,9 @@ export function CaseDetail({
   initialCustomers,
   initialVehicles,
   initialInvoices,
+  role,
+  isAdmin,
+  workshopName,
 }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -87,6 +95,21 @@ export function CaseDetail({
     () => customers.find((c) => c.id === selectedCustomerId) ?? null,
     [customers, selectedCustomerId]
   );
+
+  const selectedVehicle = useMemo(
+    () => vehicles.find((v) => v.id === selectedVehicleId) ?? null,
+    [vehicles, selectedVehicleId]
+  );
+
+  const vehicleDescr = useMemo(() => {
+    if (!selectedVehicle) return null;
+    const parts = [
+      selectedVehicle.make,
+      selectedVehicle.model,
+      selectedVehicle.plate,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [selectedVehicle]);
 
   const [caseForm, setCaseForm] = useState<CaseFormInputValues>({
     status: initialCase.status,
@@ -253,6 +276,17 @@ export function CaseDetail({
             caseId={caseData.id}
             customerEmail={selectedCustomer?.email ?? null}
             caseStatus={caseData.status}
+            role={role}
+            isAdmin={isAdmin}
+          />
+          <NotifyWhatsAppButton
+            caseStatus={caseData.status}
+            customerName={selectedCustomer?.full_name ?? null}
+            customerPhone={selectedCustomer?.phone ?? null}
+            vehicleDescr={vehicleDescr}
+            workshopName={workshopName}
+            role={role}
+            isAdmin={isAdmin}
           />
           <button
             onClick={handleDeleteCase}
