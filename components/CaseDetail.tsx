@@ -342,6 +342,7 @@ export function CaseDetail({
           selectedCustomerId={selectedCustomerId}
           onSelect={handleSelectCustomer}
           onCreateNew={() => setShowCustomerModal(true)}
+          readOnly
         />
 
         <VehiclePanel
