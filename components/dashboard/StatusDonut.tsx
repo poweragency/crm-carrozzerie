@@ -1,13 +1,16 @@
 import { CASE_STATUS_LABELS, CASE_STATUS_ORDER } from "@/lib/constants";
 import type { CaseStatus } from "@/types/database.types";
 
+// liquidato è ciano-400: gli altri 5 occupano già purple/yellow/blue/
+// emerald/orange e l'emerald di "completata" finiva sovrapposto al
+// vecchio emerald-500 di liquidato.
 const COLORS: Record<CaseStatus, string> = {
   preparazione: "rgb(var(--chart-5))",
   verniciatura: "rgb(var(--status-warning))",
   finitura: "rgb(var(--status-info))",
   completata: "rgb(var(--status-success))",
   consegnata: "rgb(var(--accent))",
-  liquidato: "rgb(16 185 129)",
+  liquidato: "rgb(34 211 238)",
 };
 
 interface Props {

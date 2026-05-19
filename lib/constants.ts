@@ -67,5 +67,5 @@ export const CASE_STATUS_COLORS: Record<CaseStatus, { bg: string; text: string }
   finitura: { bg: "bg-status-info/10", text: "text-status-info" },
   completata: { bg: "bg-status-success/10", text: "text-status-success" },
   consegnata: { bg: "bg-accent/10", text: "text-accent" },
-  liquidato: { bg: "bg-emerald-500/10", text: "text-emerald-400" },
+  liquidato: { bg: "bg-cyan-500/10", text: "text-cyan-400" },
 };
