@@ -271,30 +271,39 @@ export function CaseDetail({
             <CaseStatusBadge status={caseData.status} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <NotifyButton
-            caseId={caseData.id}
-            customerEmail={selectedCustomer?.email ?? null}
-            caseStatus={caseData.status}
-            role={role}
-            isAdmin={isAdmin}
-          />
-          <NotifyWhatsAppButton
-            caseStatus={caseData.status}
-            customerName={selectedCustomer?.full_name ?? null}
-            customerPhone={selectedCustomer?.phone ?? null}
-            vehicleDescr={vehicleDescr}
-            workshopName={workshopName}
-            role={role}
-            isAdmin={isAdmin}
-          />
-          <button
-            onClick={handleDeleteCase}
-            className="btn-ghost text-red-400 hover:text-red-300"
-            type="button"
-          >
-            <Trash2 className="w-4 h-4" /> Elimina pratica
-          </button>
+        <div className="flex flex-col items-stretch sm:items-end gap-1.5">
+          <div className="flex items-center gap-2">
+            <NotifyButton
+              caseId={caseData.id}
+              customerEmail={selectedCustomer?.email ?? null}
+              caseStatus={caseData.status}
+              role={role}
+              isAdmin={isAdmin}
+            />
+            <NotifyWhatsAppButton
+              caseStatus={caseData.status}
+              customerName={selectedCustomer?.full_name ?? null}
+              customerPhone={selectedCustomer?.phone ?? null}
+              vehicleDescr={vehicleDescr}
+              workshopName={workshopName}
+              role={role}
+              isAdmin={isAdmin}
+            />
+            <button
+              onClick={handleDeleteCase}
+              className="btn-ghost text-red-400 hover:text-red-300"
+              type="button"
+            >
+              <Trash2 className="w-4 h-4" /> Elimina pratica
+            </button>
+          </div>
+          {(isAdmin || role === "owner") && caseData.status !== "completata" && (
+            <p className="text-[11px] text-text-subtle sm:text-right">
+              Contrassegna la pratica come <span className="font-medium">Completata</span>{" "}
+              e premi <span className="font-medium">Salva</span> per poter notificare il
+              cliente.
+            </p>
+          )}
         </div>
       </div>
 
