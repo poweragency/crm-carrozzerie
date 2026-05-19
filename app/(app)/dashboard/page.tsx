@@ -254,7 +254,7 @@ export default async function DashboardPage() {
                   {formatCurrency(collected)}
                 </div>
                 <div className="text-[11px] text-text-subtle">
-                  Solo pratiche consegnate
+                  Solo pratiche liquidate
                 </div>
               </div>
               <CheckCircle2
