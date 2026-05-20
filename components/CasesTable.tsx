@@ -21,6 +21,7 @@ import { CasePanel } from "./case/CasePanel";
 import { Field } from "./case/Field";
 import { CustomerFormModal } from "./customer/CustomerFormModal";
 import { VehicleFormModal } from "./customer/VehicleFormModal";
+import { Combobox } from "./ui/Combobox";
 import type { Case, CaseStatus, Customer, Vehicle } from "@/types/database.types";
 
 export type CaseWithRelations = Case & {
@@ -574,22 +575,18 @@ function NewCaseModal({
           <div className="space-y-3">
             <Field label="Cliente *" htmlFor="nc-customer" error={errors["customer"]}>
               <div className="flex gap-2">
-                <select
-                  id="nc-customer"
-                  value={customerId}
-                  onChange={(e) => handleCustomerChange(e.target.value)}
-                  disabled={loading}
-                  className="input-base flex-1"
-                >
-                  <option value="" disabled>
-                    {loading ? "Caricamento..." : "— Seleziona cliente —"}
-                  </option>
-                  {customerOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <Combobox
+                    id="nc-customer"
+                    value={customerId}
+                    onChange={handleCustomerChange}
+                    options={customerOptions}
+                    disabled={loading}
+                    placeholder={loading ? "Caricamento..." : "— Seleziona cliente —"}
+                    emptyLabel="Nessun cliente trovato"
+                    ariaLabel="Seleziona cliente"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowCustomerModal(true)}
@@ -614,22 +611,24 @@ function NewCaseModal({
               }
             >
               <div className="flex gap-2">
-                <select
-                  id="nc-vehicle"
-                  value={vehicleId}
-                  onChange={(e) => setVehicleId(e.target.value)}
-                  disabled={!customerId || loading || vehicleOptions.length === 0}
-                  className="input-base flex-1"
-                >
-                  <option value="">
-                    {vehicleOptions.length === 0 ? "— Nessun veicolo —" : "— Nessuno —"}
-                  </option>
-                  {vehicleOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1">
+                  <Combobox
+                    id="nc-vehicle"
+                    value={vehicleId}
+                    onChange={setVehicleId}
+                    options={vehicleOptions}
+                    disabled={!customerId || loading || vehicleOptions.length === 0}
+                    placeholder={
+                      !customerId
+                        ? "— Seleziona prima un cliente —"
+                        : vehicleOptions.length === 0
+                          ? "— Nessun veicolo —"
+                          : "— Nessuno —"
+                    }
+                    emptyLabel="Nessun veicolo trovato"
+                    ariaLabel="Seleziona veicolo"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowVehicleModal(true)}
