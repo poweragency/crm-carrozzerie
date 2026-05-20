@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Phone, Mail, Car, FolderKanban, Users, Plus } from "lucide-react";
+import {
+  Search,
+  Phone,
+  Mail,
+  Car,
+  FolderKanban,
+  Users,
+  Plus,
+  Upload,
+} from "lucide-react";
 import { cn, formatCurrency, formatDate, initials } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CustomerFormModal } from "@/components/customer/CustomerFormModal";
@@ -55,6 +64,14 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
               className="input-base pl-8 w-72"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => router.push("/customers/importa")}
+            className="btn-secondary"
+          >
+            <Upload className="w-4 h-4" strokeWidth={2.5} />
+            Importa Excel
+          </button>
           <button type="button" onClick={() => setShowNew(true)} className="btn-primary">
             <Plus className="w-4 h-4" strokeWidth={2.5} />
             Nuovo cliente

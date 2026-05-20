@@ -12,6 +12,7 @@ import { formatDateTime, initials } from "@/lib/utils";
 import { Field, Section } from "./case/Field";
 import { VehiclesPanel } from "./customer/VehiclesPanel";
 import { CustomerCasesPanel, type CustomerCase } from "./customer/CustomerCasesPanel";
+import { CustomerGestionalePanel } from "./customer/CustomerGestionalePanel";
 import type { Customer, Vehicle } from "@/types/database.types";
 
 interface Props {
@@ -161,6 +162,10 @@ export function CustomerDetail({
             />
           </Field>
         </Section>
+
+        <div className="border-t border-border pt-6">
+          <CustomerGestionalePanel customer={customer} onUpdate={setCustomer} />
+        </div>
 
         <div className="border-t border-border pt-6">
           <VehiclesPanel customerId={customer.id} initialVehicles={initialVehicles} />
