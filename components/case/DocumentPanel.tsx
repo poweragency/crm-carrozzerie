@@ -54,8 +54,8 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
     return map;
   }, [photos]);
 
-  async function uploadFiles(phase: DocumentPhase, inputFiles: FileList | null) {
-    if (!inputFiles || inputFiles.length === 0) return;
+  async function uploadFiles(phase: DocumentPhase, inputFiles: File[]) {
+    if (inputFiles.length === 0) return;
     setUploadingPhase(phase);
     try {
       const {
@@ -66,7 +66,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
         return;
       }
       const uploaded: Document[] = [];
-      for (const raw of Array.from(inputFiles)) {
+      for (const raw of inputFiles) {
         const file = await compressImage(raw).catch(() => raw);
         const ext = file.name.split(".").pop() ?? "bin";
         const path = `${user.id}/${caseId}/${Date.now()}-${Math.random()
@@ -146,7 +146,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
             photos={photosByPhase[p.key]}
             uploading={uploadingPhase === p.key}
             hasCamera={hasCamera}
-            onUpload={(files) => uploadFiles(p.key, files)}
+            onUpload={(files: File[]) => uploadFiles(p.key, files)}
             onDelete={handleDelete}
           />
         ))}
@@ -161,7 +161,7 @@ interface PhaseZoneProps {
   photos: Document[];
   uploading: boolean;
   hasCamera: boolean;
-  onUpload: (files: FileList | null) => void;
+  onUpload: (files: File[]) => void;
   onDelete: (doc: Document) => Promise<void>;
 }
 
@@ -220,8 +220,9 @@ function PhaseZone({
             accept="image/*"
             capture="environment"
             onChange={(e) => {
-              onUpload(e.target.files);
+              const files = e.target.files ? Array.from(e.target.files) : [];
               if (cameraRef.current) cameraRef.current.value = "";
+              onUpload(files);
             }}
             className="hidden"
           />
@@ -230,8 +231,9 @@ function PhaseZone({
             type="file"
             multiple
             onChange={(e) => {
-              onUpload(e.target.files);
+              const files = e.target.files ? Array.from(e.target.files) : [];
               if (fileRef.current) fileRef.current.value = "";
+              onUpload(files);
             }}
             className="hidden"
             accept="image/*"
