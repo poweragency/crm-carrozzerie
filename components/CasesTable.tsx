@@ -22,7 +22,14 @@ import { Field } from "./case/Field";
 import { CustomerFormModal } from "./customer/CustomerFormModal";
 import { VehicleFormModal } from "./customer/VehicleFormModal";
 import { Combobox } from "./ui/Combobox";
-import type { Case, CaseStatus, Customer, Vehicle } from "@/types/database.types";
+import { isEmployeeRole, rolePhase } from "@/lib/roles";
+import type {
+  Case,
+  CaseStatus,
+  Customer,
+  UserRole,
+  Vehicle,
+} from "@/types/database.types";
 
 export type CaseWithRelations = Case & {
   customers: {
@@ -34,8 +41,16 @@ export type CaseWithRelations = Case & {
   vehicles: { make: string | null; model: string | null; plate: string | null } | null;
 };
 
-export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[] }) {
+export function CasesTable({
+  initialCases,
+  role = "owner",
+}: {
+  initialCases: CaseWithRelations[];
+  role?: UserRole;
+}) {
   const router = useRouter();
+  const isEmployee = isEmployeeRole(role);
+  const myPhase = rolePhase(role);
   const [cases] = useState<CaseWithRelations[]>(initialCases);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CaseStatus | "all">("all");
@@ -130,25 +145,38 @@ export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[]
     <div className="h-full flex flex-col">
       <div className="px-8 py-4 border-b border-border flex items-center gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-semibold">Pratiche</h1>
+          <h1 className="text-xl font-semibold">
+            {isEmployee ? "Le mie pratiche" : "Pratiche"}
+          </h1>
           <p className="text-xs text-text-subtle">
-            {cases.length} pratic{cases.length === 1 ? "a" : "he"} totali
+            {isEmployee && myPhase ? (
+              <>
+                Fase {CASE_STATUS_LABELS[myPhase].toLowerCase()} · {cases.length} da
+                lavorare
+              </>
+            ) : (
+              <>
+                {cases.length} pratic{cases.length === 1 ? "a" : "he"} totali
+              </>
+            )}
           </p>
         </div>
 
         <div className="ml-auto flex items-center gap-3 flex-wrap">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as CaseStatus | "all")}
-            className="input-base w-44"
-          >
-            <option value="all">Tutti gli stati</option>
-            {CASE_STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {CASE_STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
+          {!isEmployee && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as CaseStatus | "all")}
+              className="input-base w-44"
+            >
+              <option value="all">Tutti gli stati</option>
+              {CASE_STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {CASE_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="relative">
             <Search
               className="w-4 h-4 text-text-subtle absolute left-2.5 top-1/2 -translate-y-1/2"
@@ -162,26 +190,34 @@ export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[]
               className="input-base pl-8 w-72"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className={cn(
-              "btn-secondary relative",
-              showFilters && "border-accent text-accent"
-            )}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filtri
-            {activeFiltersCount > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center text-[10px] font-semibold min-w-[18px] h-[18px] rounded-full bg-accent text-accent-contrast px-1">
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
-          <button onClick={() => setShowNew(true)} className="btn-primary" type="button">
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-            Nuova pratica
-          </button>
+          {!isEmployee && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowFilters((v) => !v)}
+                className={cn(
+                  "btn-secondary relative",
+                  showFilters && "border-accent text-accent"
+                )}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filtri
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center text-[10px] font-semibold min-w-[18px] h-[18px] rounded-full bg-accent text-accent-contrast px-1">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setShowNew(true)}
+                className="btn-primary"
+                type="button"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2.5} />
+                Nuova pratica
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -296,9 +332,11 @@ export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[]
                 <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
                   Stato
                 </th>
-                <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
-                  Prezzo
-                </th>
+                {!isEmployee && (
+                  <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
+                    Prezzo
+                  </th>
+                )}
                 <th className="text-left text-xs font-medium text-text-muted px-5 py-3">
                   Aperta
                 </th>
@@ -307,9 +345,14 @@ export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[]
             <tbody className="divide-y divide-border">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-sm text-text-subtle py-10">
+                  <td
+                    colSpan={isEmployee ? 6 : 7}
+                    className="text-center text-sm text-text-subtle py-10"
+                  >
                     {cases.length === 0
-                      ? "Nessuna pratica. Sposta un lead in 'Cliente' nel Kanban o crea una nuova pratica."
+                      ? isEmployee
+                        ? "Nessuna pratica nella tua fase al momento."
+                        : "Nessuna pratica. Sposta un lead in 'Cliente' nel Kanban o crea una nuova pratica."
                       : "Nessun risultato."}
                   </td>
                 </tr>
@@ -381,9 +424,11 @@ export function CasesTable({ initialCases }: { initialCases: CaseWithRelations[]
                       <td className="px-5 py-3">
                         <CaseStatusBadge status={c.status} />
                       </td>
-                      <td className="px-5 py-3 text-sm tabular-nums">
-                        {formatCurrency(c.price)}
-                      </td>
+                      {!isEmployee && (
+                        <td className="px-5 py-3 text-sm tabular-nums">
+                          {formatCurrency(c.price)}
+                        </td>
+                      )}
                       <td className="px-5 py-3 text-xs text-text-muted">
                         {formatDate(c.created_at)}
                       </td>

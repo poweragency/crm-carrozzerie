@@ -7,9 +7,14 @@ interface Ctx {
   params: Promise<{ id: string }>;
 }
 
-const patchBodySchema = z.object({
-  password: z.string().min(6, "Password troppo corta (min. 6 caratteri)"),
-});
+const patchBodySchema = z
+  .object({
+    password: z.string().min(6, "Password troppo corta (min. 6 caratteri)").optional(),
+    role: z.enum(["preparatore", "verniciatore", "finitore"]).optional(),
+  })
+  .refine((d) => d.password !== undefined || d.role !== undefined, {
+    message: "Niente da aggiornare",
+  });
 
 async function ensureStaffOfWorkshop(
   id: string,
@@ -30,9 +35,9 @@ async function ensureStaffOfWorkshop(
       { status: 403 }
     );
   }
-  if (target.role !== "staff") {
+  if (target.role === "owner") {
     return NextResponse.json(
-      { error: "L'azione è permessa solo sugli account staff" },
+      { error: "L'azione è permessa solo sui dipendenti" },
       { status: 400 }
     );
   }
@@ -41,7 +46,8 @@ async function ensureStaffOfWorkshop(
 
 /**
  * PATCH /api/team/users/[id]
- * Resetta la password di un dipendente. Body: { password }
+ * Aggiorna un dipendente: reset password e/o cambio mansione.
+ * Body: { password? } e/o { role? }
  */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const auth = await requireOwner();
@@ -50,7 +56,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   if (id === auth.userId) {
     return NextResponse.json(
-      { error: "Per cambiare la tua password vai in Impostazioni Supabase" },
+      { error: "Non puoi modificare il tuo stesso account da qui" },
       { status: 400 }
     );
   }
@@ -68,12 +74,28 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(id, {
-    password: parsed.data.password,
-  });
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Cambio mansione: aggiorna profiles.role (fonte di verità lato app).
+  if (parsed.data.role) {
+    const { error } = await admin
+      .from("profiles")
+      .update({ role: parsed.data.role })
+      .eq("id", id);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
   }
+
+  // Reset password.
+  if (parsed.data.password) {
+    const { error } = await admin.auth.admin.updateUserById(id, {
+      password: parsed.data.password,
+    });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
 

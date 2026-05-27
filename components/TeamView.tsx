@@ -20,6 +20,13 @@ import { EmptyState } from "./ui/EmptyState";
 import { CreateStaffModal } from "./team/CreateStaffModal";
 import { ResetStaffPasswordModal } from "./team/ResetStaffPasswordModal";
 import { ActivityFeed, type ActivityEntry } from "./team/ActivityFeed";
+import {
+  EMPLOYEE_ROLES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  isEmployeeRole,
+  type EmployeeRole,
+} from "@/lib/roles";
 import type { UserRole } from "@/types/database.types";
 
 export interface TeamMember {
@@ -68,8 +75,27 @@ export function TeamView({
     toast.success("Dipendente rimosso");
   }
 
+  async function handleRoleChange(m: TeamMember, newRole: EmployeeRole) {
+    if (m.role === newRole) return;
+    const prevRole = m.role;
+    // Aggiornamento ottimistico
+    setList((prev) => prev.map((x) => (x.id === m.id ? { ...x, role: newRole } : x)));
+    const res = await fetch(`/api/team/users/${m.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      toast.error("Cambio mansione fallito", { description: json?.error });
+      setList((prev) => prev.map((x) => (x.id === m.id ? { ...x, role: prevRole } : x)));
+      return;
+    }
+    toast.success(`Mansione aggiornata: ${ROLE_LABELS[newRole]}`);
+  }
+
   const owners = list.filter((m) => m.role === "owner");
-  const staff = list.filter((m) => m.role === "staff");
+  const employees = list.filter((m) => isEmployeeRole(m.role));
 
   return (
     <div className="h-full flex flex-col">
@@ -78,8 +104,8 @@ export function TeamView({
           <h1 className="text-xl font-semibold">Team</h1>
           <p className="text-xs text-text-subtle">
             {list.length} membr{list.length === 1 ? "o" : "i"} · {owners.length} titolar
-            {owners.length === 1 ? "e" : "i"} · {staff.length} dipendent
-            {staff.length === 1 ? "e" : "i"}
+            {owners.length === 1 ? "e" : "i"} · {employees.length} dipendent
+            {employees.length === 1 ? "e" : "i"}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-3 flex-wrap">
@@ -143,15 +169,20 @@ export function TeamView({
               members={owners}
               onDelete={handleDelete}
               onReset={setResetTarget}
+              onRoleChange={handleRoleChange}
             />
-            <Section
-              title="Dipendenti"
-              description="Accesso operativo: lead, clienti, pratiche, calendario. Non vedono dati fiscali, fatturato o Facebook Ads."
-              members={staff}
-              emptyHint="Nessun dipendente. Aggiungine uno per dargli accesso al gestionale."
-              onDelete={handleDelete}
-              onReset={setResetTarget}
-            />
+            {EMPLOYEE_ROLES.map((r) => (
+              <Section
+                key={r}
+                title={`${ROLE_LABELS[r].slice(0, -1)}i`}
+                description={ROLE_DESCRIPTIONS[r]}
+                members={employees.filter((m) => m.role === r)}
+                emptyHint={`Nessun ${ROLE_LABELS[r].toLowerCase()}. Aggiungi un dipendente con questa mansione.`}
+                onDelete={handleDelete}
+                onReset={setResetTarget}
+                onRoleChange={handleRoleChange}
+              />
+            ))}
           </div>
         ) : (
           <ActivityFeed entries={activity} />
@@ -187,6 +218,7 @@ function Section({
   emptyHint,
   onDelete,
   onReset,
+  onRoleChange,
 }: {
   title: string;
   description: string;
@@ -194,6 +226,7 @@ function Section({
   emptyHint?: string;
   onDelete: (m: TeamMember) => void;
   onReset: (m: TeamMember) => void;
+  onRoleChange: (m: TeamMember, role: EmployeeRole) => void;
 }) {
   return (
     <div className="card overflow-hidden">
@@ -234,17 +267,26 @@ function Section({
                         Tu
                       </span>
                     )}
-                    <span
-                      className={cn(
-                        "text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded inline-flex items-center gap-1",
-                        m.role === "owner"
-                          ? "bg-accent/10 text-accent"
-                          : "bg-status-info/10 text-status-info"
-                      )}
-                    >
-                      <Icon className="w-3 h-3" strokeWidth={2.5} />
-                      {m.role === "owner" ? "Titolare" : "Dipendente"}
-                    </span>
+                    {m.role === "owner" ? (
+                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded inline-flex items-center gap-1 bg-accent/10 text-accent">
+                        <Icon className="w-3 h-3" strokeWidth={2.5} />
+                        Titolare
+                      </span>
+                    ) : (
+                      <select
+                        value={m.role}
+                        onChange={(e) => onRoleChange(m, e.target.value as EmployeeRole)}
+                        className="text-[11px] rounded border border-border bg-bg-input px-1.5 py-0.5 text-text-muted hover:border-border-hover focus:border-accent focus:outline-none"
+                        title="Cambia mansione"
+                        aria-label="Cambia mansione"
+                      >
+                        {EMPLOYEE_ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABELS[r]}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-[11px] text-text-subtle mt-0.5 flex-wrap">
                     <span className="inline-flex items-center gap-1">
@@ -258,7 +300,7 @@ function Section({
                     )}
                   </div>
                 </div>
-                {m.role === "staff" && !m.is_me && (
+                {isEmployeeRole(m.role) && !m.is_me && (
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"

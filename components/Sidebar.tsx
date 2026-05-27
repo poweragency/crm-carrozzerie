@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 import { useCommandPalette } from "./CommandPalette";
 import { NotificationBell } from "./NotificationBell";
+import { isEmployeeRole } from "@/lib/roles";
 import type { UserRole } from "@/types/database.types";
 
 const baseNav = [
@@ -30,6 +31,9 @@ const baseNav = [
   { href: "/cases", label: "Pratiche", icon: FolderKanban },
   { href: "/calendar", label: "Calendario", icon: Calendar },
 ];
+
+// I dipendenti con mansione vedono solo la coda delle loro pratiche.
+const employeeNav = [{ href: "/cases", label: "Le mie pratiche", icon: FolderKanban }];
 
 interface Props {
   userId: string;
@@ -53,6 +57,8 @@ export function Sidebar({
   onClose,
 }: Props) {
   const isOwner = role === "owner";
+  const isEmployee = isEmployeeRole(role);
+  const nav = isEmployee ? employeeNav : baseNav;
   const pathname = usePathname();
   const { setOpen: openPalette } = useCommandPalette();
 
@@ -127,7 +133,7 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto flex flex-col">
-          {baseNav.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (

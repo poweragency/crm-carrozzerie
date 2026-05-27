@@ -20,9 +20,9 @@ export default async function SettingsPage() {
   if (!profile) notFound();
 
   // Solo l'owner del workshop accede alle Impostazioni (dati fiscali, FB Ads,
-  // logo, ecc.). Lo staff non vede nemmeno la voce nel menu, ma blocchiamo
+  // logo, ecc.). I dipendenti non vedono nemmeno la voce nel menu, ma blocchiamo
   // anche l'accesso diretto via URL.
-  if (profile.role === "staff") redirect("/dashboard");
+  if (profile.role !== "owner") redirect("/dashboard");
 
   return <SettingsForm initialProfile={profile} userEmail={user.email ?? ""} />;
 }

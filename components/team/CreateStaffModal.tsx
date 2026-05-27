@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { X, Eye, EyeOff, Copy, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Field } from "@/components/case/Field";
+import {
+  EMPLOYEE_ROLES,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  type EmployeeRole,
+} from "@/lib/roles";
 
 interface Props {
   onClose: () => void;
@@ -21,6 +27,7 @@ function generatePassword(): string {
 export function CreateStaffModal({ onClose, onCreated }: Props) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<EmployeeRole>("preparatore");
   const [password, setPassword] = useState(generatePassword());
   const [showPassword, setShowPassword] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,6 +66,7 @@ export function CreateStaffModal({ onClose, onCreated }: Props) {
         full_name: fullName.trim(),
         email: email.trim(),
         password,
+        role,
       }),
     });
     setSaving(false);
@@ -195,6 +203,21 @@ export function CreateStaffModal({ onClose, onCreated }: Props) {
               placeholder="mario@officina.it"
               autoComplete="off"
             />
+          </Field>
+
+          <Field label="Mansione *" htmlFor="cs-role" hint={ROLE_DESCRIPTIONS[role]}>
+            <select
+              id="cs-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as EmployeeRole)}
+              className="input-base"
+            >
+              {EMPLOYEE_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field

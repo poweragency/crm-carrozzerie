@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CaseDetail } from "@/components/CaseDetail";
+import { CaseWorkbench } from "@/components/CaseWorkbench";
+import { isEmployeeRole } from "@/lib/roles";
+import type { UserRole, Vehicle } from "@/types/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,7 @@ export default async function CaseDetailPage({ params }: Props) {
     .eq("id", id)
     .single();
 
+  // RLS: i dipendenti vedono la pratica solo se è nella loro fase.
   if (!caseData) notFound();
 
   const [
@@ -55,8 +59,23 @@ export default async function CaseDetailPage({ params }: Props) {
       : Promise.resolve({ data: null }),
   ]);
 
-  const role = profile?.role ?? "owner";
+  const role: UserRole = profile?.role ?? "owner";
   const isAdmin = user?.app_metadata?.is_admin === true;
+
+  // Vista focalizzata per i dipendenti con mansione.
+  if (isEmployeeRole(role) && !isAdmin) {
+    const vehicle =
+      ((vehicles ?? []) as Vehicle[]).find((v) => v.id === caseData.vehicle_id) ?? null;
+    return (
+      <CaseWorkbench
+        initialCase={caseData}
+        initialDocuments={documents ?? []}
+        vehicle={vehicle}
+        role={role}
+      />
+    );
+  }
+
   const workshopName =
     (
       profile as unknown as {

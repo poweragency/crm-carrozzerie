@@ -14,6 +14,8 @@ interface Props {
   caseId: string;
   documents: Document[];
   onChange: (next: Document[]) => void;
+  // Limita le zone foto mostrate (es. il dipendente vede solo la propria fase).
+  phases?: DocumentPhase[];
 }
 
 const PHASES: { key: DocumentPhase; label: string }[] = [
@@ -26,11 +28,13 @@ function isImage(d: Document): boolean {
   return d.mime_type?.startsWith("image/") ?? false;
 }
 
-export function DocumentPanel({ caseId, documents, onChange }: Props) {
+export function DocumentPanel({ caseId, documents, onChange, phases }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const confirm = useConfirm();
   const [uploadingPhase, setUploadingPhase] = useState<DocumentPhase | null>(null);
   const [hasCamera, setHasCamera] = useState(false);
+
+  const visiblePhases = phases ? PHASES.filter((p) => phases.includes(p.key)) : PHASES;
 
   useEffect(() => {
     const mq = window.matchMedia("(any-pointer: coarse)");
@@ -138,7 +142,7 @@ export function DocumentPanel({ caseId, documents, onChange }: Props) {
       </div>
 
       <div className="rounded-md border border-border bg-bg-elevated divide-y divide-border">
-        {PHASES.map((p) => (
+        {visiblePhases.map((p) => (
           <PhaseZone
             key={p.key}
             phase={p.key}

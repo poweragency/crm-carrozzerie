@@ -7,12 +7,16 @@ const bodySchema = z.object({
   email: z.string().email("Email non valida"),
   password: z.string().min(6, "Password troppo corta (min. 6 caratteri)"),
   full_name: z.string().trim().min(1, "Nome obbligatorio").max(120),
+  role: z.enum(["preparatore", "verniciatore", "finitore"], {
+    message: "Mansione non valida",
+  }),
 });
 
 /**
  * POST /api/team/users
- * Crea un nuovo dipendente (staff) linkato al workshop dell'owner caller.
- * Body: { email, password, full_name }
+ * Crea un nuovo dipendente con mansione (preparatore/verniciatore/finitore)
+ * linkato al workshop dell'owner caller.
+ * Body: { email, password, full_name, role }
  */
 export async function POST(req: NextRequest) {
   const auth = await requireOwner();
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
     email_confirm: true,
     user_metadata: {
       full_name: body.full_name,
-      role: "staff",
+      role: body.role,
       workshop_id: auth.workshopId,
     },
   });
