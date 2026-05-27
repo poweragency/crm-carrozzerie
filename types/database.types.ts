@@ -1131,6 +1131,10 @@ export type Database = {
           vat_number: string;
         }[];
       };
+      advance_case_phase: {
+        Args: { p_case_id: string };
+        Returns: Database["public"]["Tables"]["cases"]["Row"];
+      };
       audit_actor_info: { Args: never; Returns: Record<string, unknown> };
       create_invoice_draft: {
         Args: {

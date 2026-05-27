@@ -43,7 +43,7 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
-  const [caseData, setCaseData] = useState(initialCase);
+  const [caseData] = useState(initialCase);
   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
   const [advancing, setAdvancing] = useState(false);
 
@@ -73,23 +73,24 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
       return;
     }
     setAdvancing(true);
-    const { data: updated, error } = await supabase
-      .from("cases")
-      .update({ status: next })
-      .eq("id", caseData.id)
-      .select("*, customers(id, full_name, phone, email)")
-      .single();
+    // L'avanzamento passa per la RPC SECURITY DEFINER (bypassa l'RLS sulla
+    // transizione di fase e applica il gate-foto lato DB).
+    const { error } = await supabase.rpc("advance_case_phase", {
+      p_case_id: caseData.id,
+    });
     setAdvancing(false);
     if (error) {
-      const msg = error.message.includes("photo_required")
+      const m = error.message;
+      const msg = m.includes("photo_required")
         ? "Carica almeno una foto della fase prima di avanzare."
-        : error.message.includes("forbidden_phase")
+        : m.includes("forbidden_phase")
           ? "Questa pratica non è (più) nella tua fase."
-          : error.message;
+          : m.includes("not_advanceable")
+            ? "Questa pratica non può essere avanzata."
+            : m;
       toast.error("Passaggio non riuscito", { description: msg });
       return;
     }
-    if (updated) setCaseData(updated as CaseWithCustomer);
     toast.success(
       `Fase ${CASE_STATUS_LABELS[myPhase].toLowerCase()} completata e passata avanti`
     );

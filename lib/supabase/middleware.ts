@@ -49,15 +49,15 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Gating dipendenti: le mansioni (preparatore/verniciatore/finitore) possono
-  // accedere solo alla coda pratiche (/cases) e alle API. Ogni altra pagina app
-  // viene reindirizzata a /cases. Interroghiamo il ruolo solo quando serve
+  // accedere alla coda pratiche (/cases), all'anagrafica clienti (/customers,
+  // tranne l'import massivo riservato all'owner) e alle API. Ogni altra pagina
+  // app viene reindirizzata a /cases. Interroghiamo il ruolo solo quando serve
   // (path potenzialmente ristretto) per non gravare su ogni richiesta.
-  if (
-    user &&
-    !isPublic &&
-    !pathname.startsWith("/cases") &&
-    !pathname.startsWith("/api")
-  ) {
+  const employeeAllowed =
+    pathname.startsWith("/cases") ||
+    pathname.startsWith("/api") ||
+    (pathname.startsWith("/customers") && !pathname.startsWith("/customers/importa"));
+  if (user && !isPublic && !employeeAllowed) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
