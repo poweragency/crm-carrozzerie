@@ -332,15 +332,18 @@ export function LeadModal({ lead, onClose, onSaved }: Props) {
               }
               className="input-base"
             >
-              {LEAD_STATUS_ORDER.map((s) => (
+              {LEAD_STATUS_ORDER.filter(
+                (s) => s !== "cliente" || lead?.status === "cliente"
+              ).map((s) => (
                 <option key={s} value={s}>
                   {LEAD_STATUS_LABELS[s]}
                 </option>
               ))}
             </select>
-            {form.status === "cliente" && lead?.status !== "cliente" && (
-              <p className="text-xs text-accent mt-1.5">
-                Salvando, verrà creato automaticamente un cliente e una pratica.
+            {lead?.status !== "cliente" && (
+              <p className="text-xs text-text-subtle mt-1.5">
+                Per trasformarlo in cliente, trascinalo in &quot;Cliente&quot; nel Kanban:
+                ti verranno chiesti i dati della vettura.
               </p>
             )}
           </FormField>

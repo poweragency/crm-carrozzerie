@@ -126,6 +126,12 @@ export function CaseDetail({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Controllo finale del titolare: obbligatorio prima di completare una pratica
+  // ancora in produzione (preparazione/verniciatura/finitura).
+  const [manualCheck, setManualCheck] = useState(false);
+  const canSeePostProduction = isAdmin || role === "owner";
+  const requireOwnerCheck =
+    canSeePostProduction && CASE_PRODUCTION_STATUSES.includes(caseData.status);
 
   useUnsavedChangesWarning(dirty);
 
@@ -170,6 +176,16 @@ export function CaseDetail({
         flat[`case.${String(i.path[0])}`] = i.message;
       setErrors(flat);
       toast.error("Controlla i campi evidenziati");
+      return;
+    }
+
+    // Gate controllo titolare: per completare una pratica ancora in produzione
+    // il titolare deve aver spuntato il controllo manuale.
+    if (requireOwnerCheck && caseResult.data.status === "completata" && !manualCheck) {
+      toast.error("Controllo del titolare richiesto", {
+        description:
+          "Spunta «Pratica controllata manualmente» prima di contrassegnarla come Completata.",
+      });
       return;
     }
 
@@ -335,7 +351,13 @@ export function CaseDetail({
         </div>
         <CaseStatusTimeline
           current={caseForm.status}
-          canSeePostProduction={isAdmin || role === "owner"}
+          canSeePostProduction={canSeePostProduction}
+          requireOwnerCheck={requireOwnerCheck}
+          ownerChecked={manualCheck}
+          onOwnerCheckChange={(v) => {
+            setManualCheck(v);
+            setDirty(true);
+          }}
           onChange={(s) => {
             setCaseForm((f) => ({ ...f, status: s }));
             setDirty(true);
@@ -442,15 +464,36 @@ export function CaseDetail({
   );
 }
 
+const POST_PRODUCTION = new Set<CaseStatus>(["completata", "consegnata", "liquidato"]);
+
 function CaseStatusTimeline({
   current,
   canSeePostProduction,
+  requireOwnerCheck,
+  ownerChecked,
+  onOwnerCheckChange,
   onChange,
 }: {
   current: CaseStatus;
   canSeePostProduction: boolean;
+  requireOwnerCheck: boolean;
+  ownerChecked: boolean;
+  onOwnerCheckChange: (v: boolean) => void;
   onChange: (s: CaseStatus) => void;
 }) {
+  // Il titolare deve spuntare il controllo manuale prima di poter contrassegnare
+  // gli step post-produzione (a partire da Completata).
+  const stepLocked = (s: CaseStatus) =>
+    requireOwnerCheck && !ownerChecked && POST_PRODUCTION.has(s);
+  const handleStep = (s: CaseStatus) => {
+    if (stepLocked(s)) {
+      toast.error("Controllo del titolare richiesto", {
+        description: "Spunta «Pratica controllata manualmente» qui sopra.",
+      });
+      return;
+    }
+    onChange(s);
+  };
   // Lo staff vede solo i tre step di produzione. La parte post-produzione
   // (completata/consegnata/liquidato) è riservata all'owner — sia in lettura
   // sia in scrittura. Lo staff può però "chiudere" la lavorazione tramite il
@@ -467,6 +510,31 @@ function CaseStatusTimeline({
 
   return (
     <div>
+      {requireOwnerCheck && (
+        <label
+          className={cn(
+            "flex items-start gap-2 mb-4 p-2.5 rounded-md border cursor-pointer select-none transition-colors",
+            ownerChecked
+              ? "border-status-success/40 bg-status-success/5"
+              : "border-yellow-500/40 bg-yellow-500/5"
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={ownerChecked}
+            onChange={(e) => onOwnerCheckChange(e.target.checked)}
+            className="w-4 h-4 mt-0.5 accent-accent shrink-0"
+          />
+          <span className="text-xs leading-snug">
+            <span className="font-medium">
+              Pratica controllata manualmente dal titolare
+            </span>
+            <span className="block text-text-subtle">
+              Obbligatorio prima di contrassegnare la pratica come Completata.
+            </span>
+          </span>
+        </label>
+      )}
       <div className="relative">
         <div className="flex items-center justify-between gap-1 sm:gap-2">
           {visibleSteps.map((s, i) => {
@@ -475,7 +543,7 @@ function CaseStatusTimeline({
             return (
               <div key={s} className="flex-1 flex flex-col items-center min-w-0">
                 <button
-                  onClick={() => onChange(s)}
+                  onClick={() => handleStep(s)}
                   type="button"
                   className={cn(
                     "relative w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-semibold transition-all",
@@ -484,9 +552,15 @@ function CaseStatusTimeline({
                     isDone && "bg-accent/30 border-accent/60 text-accent",
                     !isCurrent &&
                       !isDone &&
-                      "bg-bg-hover border-border text-text-subtle hover:border-border-hover hover:text-text"
+                      "bg-bg-hover border-border text-text-subtle hover:border-border-hover hover:text-text",
+                    stepLocked(s) && "opacity-40 cursor-not-allowed hover:border-border"
                   )}
                   aria-label={CASE_STATUS_LABELS[s]}
+                  title={
+                    stepLocked(s)
+                      ? "Spunta il controllo del titolare per sbloccare"
+                      : undefined
+                  }
                 >
                   {isDone ? "✓" : i + 1}
                 </button>

@@ -1136,6 +1136,19 @@ export type Database = {
         Returns: Database["public"]["Tables"]["cases"]["Row"];
       };
       audit_actor_info: { Args: never; Returns: Record<string, unknown> };
+      convert_lead_to_vehicle_customer: {
+        Args: {
+          p_lead_id: string;
+          p_make?: string | null;
+          p_model?: string | null;
+          p_plate?: string | null;
+          p_year?: number | null;
+          p_color?: string | null;
+          p_vin?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: string;
+      };
       create_invoice_draft: {
         Args: {
           p_case_id: string;

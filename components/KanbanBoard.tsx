@@ -17,10 +17,15 @@ import {
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { LEAD_STATUS_COLORS, LEAD_STATUS_LABELS, LEAD_STATUS_ORDER } from "@/lib/constants";
+import {
+  LEAD_STATUS_COLORS,
+  LEAD_STATUS_LABELS,
+  LEAD_STATUS_ORDER,
+} from "@/lib/constants";
 import type { Lead, LeadStatus } from "@/types/database.types";
 import { LeadCard } from "./LeadCard";
 import { LeadModal } from "./LeadModal";
+import { LeadToCustomerModal } from "./LeadToCustomerModal";
 import { Plus, Search, SlidersHorizontal, X as XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +48,11 @@ export function KanbanBoard({ initialLeads }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [modalLead, setModalLead] = useState<Lead | "new" | null>(null);
+  // Conversione lead→cliente in corso: tiene il lead e la colonna di partenza
+  // per poter tornare indietro se l'utente annulla il modale veicolo.
+  const [converting, setConverting] = useState<{ lead: Lead; from: LeadStatus } | null>(
+    null
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -78,9 +88,7 @@ export function KanbanBoard({ initialLeads }: Props) {
         { event: "INSERT", schema: "public", table: "leads" },
         (payload) => {
           const row = payload.new as Lead;
-          setLeads((prev) =>
-            prev.some((l) => l.id === row.id) ? prev : [row, ...prev]
-          );
+          setLeads((prev) => (prev.some((l) => l.id === row.id) ? prev : [row, ...prev]));
         }
       )
       .on(
@@ -158,9 +166,21 @@ export function KanbanBoard({ initialLeads }: Props) {
     if (!fromStatus || !toStatus) return;
     if (fromStatus === toStatus) return;
 
+    // Spostamento ottimistico della card.
     setLeads((prev) =>
       prev.map((l) => (l.id === draggedId ? { ...l, status: toStatus } : l))
     );
+
+    // Passaggio a "cliente": obbligatorio inserire i dati della vettura tramite
+    // il modale. Non tocchiamo il DB finché non si conferma; su annullo si torna
+    // indietro e non viene creato nulla.
+    if (toStatus === "cliente" && fromStatus !== "cliente") {
+      const lead = leads.find((l) => l.id === draggedId);
+      if (lead) {
+        setConverting({ lead: { ...lead, status: "cliente" }, from: fromStatus });
+        return;
+      }
+    }
 
     const { error } = await supabase
       .from("leads")
@@ -172,10 +192,6 @@ export function KanbanBoard({ initialLeads }: Props) {
         prev.map((l) => (l.id === draggedId ? { ...l, status: fromStatus } : l))
       );
       toast.error("Spostamento fallito", { description: error.message });
-    } else if (toStatus === "cliente" && fromStatus !== "cliente") {
-      toast.success("Cliente creato", {
-        description: "Cliente e pratica generati automaticamente.",
-      });
     }
   }
 
@@ -189,13 +205,17 @@ export function KanbanBoard({ initialLeads }: Props) {
         <div>
           <h1 className="text-xl font-semibold">Lead</h1>
           <p className="text-xs text-text-subtle">
-            Trascina i lead tra le colonne. Spostandone uno in &quot;Cliente&quot; viene creata una pratica automaticamente.
+            Trascina i lead tra le colonne. Spostandone uno in &quot;Cliente&quot; si
+            inseriscono i dati della vettura e viene creata la pratica.
           </p>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
           <div className="relative">
-            <Search className="w-4 h-4 text-text-subtle absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={2} />
+            <Search
+              className="w-4 h-4 text-text-subtle absolute left-2.5 top-1/2 -translate-y-1/2"
+              strokeWidth={2}
+            />
             <input
               type="text"
               value={search}
@@ -220,7 +240,11 @@ export function KanbanBoard({ initialLeads }: Props) {
               </span>
             )}
           </button>
-          <button onClick={() => setModalLead("new")} className="btn-primary" type="button">
+          <button
+            onClick={() => setModalLead("new")}
+            className="btn-primary"
+            type="button"
+          >
             <Plus className="w-4 h-4" strokeWidth={2.5} />
             Nuovo lead
           </button>
@@ -271,11 +295,7 @@ export function KanbanBoard({ initialLeads }: Props) {
             </div>
           )}
           {activeFiltersCount > 0 && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="btn-ghost text-xs"
-            >
+            <button type="button" onClick={resetFilters} className="btn-ghost text-xs">
               <XIcon className="w-3.5 h-3.5" />
               Azzera filtri
             </button>
@@ -319,6 +339,22 @@ export function KanbanBoard({ initialLeads }: Props) {
           onSaved={() => setModalLead(null)}
         />
       )}
+
+      {converting && (
+        <LeadToCustomerModal
+          lead={converting.lead}
+          onCancel={() => {
+            // Torna alla colonna di partenza: niente cliente/pratica creati.
+            setLeads((prev) =>
+              prev.map((l) =>
+                l.id === converting.lead.id ? { ...l, status: converting.from } : l
+              )
+            );
+            setConverting(null);
+          }}
+          onConverted={() => setConverting(null)}
+        />
+      )}
     </div>
   );
 }
@@ -343,10 +379,7 @@ function KanbanColumn({
         isOver ? "border-accent bg-accent/5" : "border-transparent"
       )}
     >
-      <div
-        className={cn("h-0.5 shrink-0 rounded-t", colors.dot)}
-        aria-hidden="true"
-      />
+      <div className={cn("h-0.5 shrink-0 rounded-t", colors.dot)} aria-hidden="true" />
       <div className="px-2.5 py-2 flex items-center gap-2 shrink-0">
         <span className={cn("w-2 h-2 rounded-full shrink-0", colors.dot)} />
         <h3 className="text-xs font-semibold truncate uppercase tracking-wide">
@@ -357,7 +390,10 @@ function KanbanColumn({
         </span>
       </div>
 
-      <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={leads.map((l) => l.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="flex-1 space-y-1.5 p-1.5 overflow-y-auto">
           {leads.length === 0 && (
             <div className="text-center text-[10px] text-text-subtle py-6">—</div>
