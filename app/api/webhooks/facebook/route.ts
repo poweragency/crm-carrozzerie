@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   // FORWARD: lead di Power Agency vengono inoltrati al CRM Power Hub.
   // Power Agency usa la stessa app FB ma è un sistema separato (poweragency.it).
   // Le entry forwardate non vengono processate qui (non sono workshop).
-  // Fire-and-forget: nessun blocco del flusso carrozzerie.
+  // AWAIT obbligatorio: su Vercel serverless fire-and-forget viene killato.
   // =========================================================================
   const POWER_AGENCY_PAGE_ID = process.env.POWER_AGENCY_PAGE_ID;
   const POWER_HUB_URL = process.env.POWER_HUB_WEBHOOK_URL;
@@ -103,16 +103,24 @@ export async function POST(req: NextRequest) {
   if (POWER_AGENCY_PAGE_ID && POWER_HUB_URL && POWER_HUB_SECRET) {
     const paEntries = (body.entry ?? []).filter(isPowerAgencyEntry);
     if (paEntries.length > 0) {
-      fetch(POWER_HUB_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-forward-secret": POWER_HUB_SECRET,
-        },
-        body: JSON.stringify({ ...body, entry: paEntries }),
-      }).catch((err) => console.error("[fb-webhook] forward power-hub failed:", err));
+      try {
+        const r = await fetch(POWER_HUB_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-forward-secret": POWER_HUB_SECRET,
+          },
+          body: JSON.stringify({ ...body, entry: paEntries }),
+        });
+        if (!r.ok) {
+          console.error("[fb-webhook] forward power-hub HTTP", r.status, await r.text());
+        }
+      } catch (err) {
+        console.error("[fb-webhook] forward power-hub failed:", err);
+      }
     }
   }
+
 
   const supabase = createAdminClient();
 
