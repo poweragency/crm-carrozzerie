@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  // =========================================================================
+   // =========================================================================
   // FORWARD: lead di Power Agency vengono inoltrati al CRM Power Hub.
   // Power Agency usa la stessa app FB ma è un sistema separato (poweragency.it).
   // Le entry forwardate non vengono processate qui (non sono workshop).
