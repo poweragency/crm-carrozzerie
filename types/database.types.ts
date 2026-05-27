@@ -1180,6 +1180,10 @@ export type Database = {
         Args: { p_invoice_id: string; p_items: Json };
         Returns: undefined;
       };
+      undo_case_phase: {
+        Args: { p_case_id: string };
+        Returns: Database["public"]["Tables"]["cases"]["Row"];
+      };
     };
     Enums: {
       appointment_kind:

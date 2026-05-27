@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Car, Check, Lock, Mail, Phone, User } from "lucide-react";
+import { ArrowRight, Car, Check, Lock, Mail, Phone, RotateCcw, User } from "lucide-react";
 import { Breadcrumb } from "./ui/Breadcrumb";
 import { createClient } from "@/lib/supabase/client";
 import { CaseStatusBadge } from "./CaseStatusBadge";
@@ -46,6 +46,10 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
   const [caseData] = useState(initialCase);
   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
   const [advancing, setAdvancing] = useState(false);
+  // Dopo l'avanzamento: finestra di 30s per annullare l'invio fatto per sbaglio.
+  const [advanced, setAdvanced] = useState(false);
+  const [undoLeft, setUndoLeft] = useState(30);
+  const [undoing, setUndoing] = useState(false);
 
   const myPhase = rolePhase(role) as DocumentPhase | null;
   const customer = caseData.customers;
@@ -94,6 +98,40 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
     toast.success(
       `Fase ${CASE_STATUS_LABELS[myPhase].toLowerCase()} completata e passata avanti`
     );
+    // Resta sulla pratica: per 30s si può annullare l'invio.
+    setAdvanced(true);
+    setUndoLeft(30);
+  }
+
+  // Countdown della finestra di annullamento; allo scadere torna alla coda.
+  useEffect(() => {
+    if (!advanced) return;
+    if (undoLeft <= 0) {
+      router.push("/cases");
+      router.refresh();
+      return;
+    }
+    const t = setTimeout(() => setUndoLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [advanced, undoLeft, router]);
+
+  async function handleUndo() {
+    setUndoing(true);
+    const { error } = await supabase.rpc("undo_case_phase", { p_case_id: caseData.id });
+    setUndoing(false);
+    if (error) {
+      const m = error.message;
+      const msg = m.includes("not_undoable")
+        ? "Non più annullabile: la pratica è già stata presa in carico."
+        : m.includes("undo_expired")
+          ? "Tempo scaduto per annullare."
+          : m.includes("forbidden")
+            ? "Non puoi annullare questo passaggio."
+            : m;
+      toast.error("Annullamento non riuscito", { description: msg });
+      return;
+    }
+    toast.success("Pratica riportata indietro");
     router.push("/cases");
     router.refresh();
   }
@@ -240,29 +278,49 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
       {isMyPhase && next && (
         <div className="fixed inset-x-0 bottom-0 sm:left-auto sm:right-8 sm:bottom-6 sm:inset-x-auto z-30 p-3 sm:p-0">
           <div className="bg-bg-card border-t sm:border border-border sm:rounded-lg px-4 py-3 shadow-card-hover flex items-center justify-between sm:justify-start gap-3 sm:gap-4">
-            <span className="text-xs">
-              {hasPhoto ? (
-                <span className="text-emerald-400">✓ Foto caricata</span>
-              ) : (
-                <span className="text-yellow-400">● Carica la foto per avanzare</span>
-              )}
-            </span>
-            <button
-              onClick={handleAdvance}
-              disabled={advancing || !hasPhoto}
-              className="btn-primary"
-              type="button"
-              title={
-                hasPhoto
-                  ? undefined
-                  : "Carica almeno una foto della fase prima di avanzare"
-              }
-            >
-              <ArrowRight className="w-4 h-4" />
-              {advancing
-                ? "Attendere..."
-                : `Completa ${CASE_STATUS_LABELS[myPhase!].toLowerCase()} → ${CASE_STATUS_LABELS[next].toLowerCase()}`}
-            </button>
+            {advanced ? (
+              <>
+                <span className="text-xs text-emerald-400">
+                  ✓ Inviata a {CASE_STATUS_LABELS[next].toLowerCase()}
+                </span>
+                <button
+                  onClick={handleUndo}
+                  disabled={undoing}
+                  className="btn-secondary"
+                  type="button"
+                  title="Riporta la pratica nella tua fase (inviata per sbaglio)"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {undoing ? "Annullo..." : `Annulla (${undoLeft}s)`}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs">
+                  {hasPhoto ? (
+                    <span className="text-emerald-400">✓ Foto caricata</span>
+                  ) : (
+                    <span className="text-yellow-400">● Carica la foto per avanzare</span>
+                  )}
+                </span>
+                <button
+                  onClick={handleAdvance}
+                  disabled={advancing || !hasPhoto}
+                  className="btn-primary"
+                  type="button"
+                  title={
+                    hasPhoto
+                      ? undefined
+                      : "Carica almeno una foto della fase prima di avanzare"
+                  }
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  {advancing
+                    ? "Attendere..."
+                    : `Completa ${CASE_STATUS_LABELS[myPhase!].toLowerCase()} → ${CASE_STATUS_LABELS[next].toLowerCase()}`}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
