@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDistributed } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   case_id: z.string().uuid(),
@@ -15,7 +15,10 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const rl = rateLimit(`invoices:${user.id}`, { windowMs: 60_000, max: 30 });
+  const rl = await rateLimitDistributed(`invoices:${user.id}`, {
+    windowMs: 60_000,
+    max: 30,
+  });
   if (!rl.ok) {
     return new NextResponse("Rate limit", {
       status: 429,
@@ -46,7 +49,8 @@ export async function POST(req: NextRequest) {
     if (error.message?.includes("case_not_found")) {
       return new NextResponse("Case not found", { status: 404 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[invoices] create_invoice_draft error:", error);
+    return new NextResponse("Errore interno", { status: 500 });
   }
 
   return NextResponse.json({ id: data });

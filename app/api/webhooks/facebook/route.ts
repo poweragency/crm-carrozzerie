@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { rateLimitDistributed, getClientIp } from "@/lib/rate-limit";
 
 /**
  * Facebook Lead Ads webhook (multi-tenant, workshop-based).
@@ -52,7 +52,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const rl = rateLimit(`fb-webhook:${ip}`, { windowMs: 60_000, max: 60 });
+  const rl = await rateLimitDistributed(`fb-webhook:${ip}`, {
+    windowMs: 60_000,
+    max: 60,
+  });
   if (!rl.ok) {
     return new NextResponse("Rate limit", {
       status: 429,
@@ -61,9 +64,15 @@ export async function POST(req: NextRequest) {
   }
   const rawBody = await req.text();
 
-  // Verifica firma (X-Hub-Signature-256) — globale, App Secret unico
+  // Verifica firma (X-Hub-Signature-256) — globale, App Secret unico.
+  // Fail-closed: senza FB_APP_SECRET configurato NON processiamo il payload,
+  // altrimenti chiunque potrebbe iniettare leadgen falsi conoscendo un page_id.
   const appSecret = process.env.FB_APP_SECRET;
-  if (appSecret) {
+  if (!appSecret) {
+    console.error("[fb-webhook] FB_APP_SECRET non impostata: webhook rifiutato");
+    return new NextResponse("Server misconfigured", { status: 500 });
+  }
+  {
     const signature = req.headers.get("x-hub-signature-256") ?? "";
     const expected =
       "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
@@ -88,7 +97,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-   // =========================================================================
+  // =========================================================================
   // FORWARD: lead di Power Agency vengono inoltrati al CRM Power Hub.
   // Power Agency usa la stessa app FB ma è un sistema separato (poweragency.it).
   // Le entry forwardate non vengono processate qui (non sono workshop).
@@ -121,14 +130,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-
   const supabase = createAdminClient();
 
   for (const entry of body.entry ?? []) {
     const pageId = entry.id;
     // Skippa le entry di Power Agency: già forwardate sopra, qui non sono workshop
     if (isPowerAgencyEntry(entry)) continue;
-
 
     // Trova il workshop che ha registrato questa Pagina FB
     const { data: workshop } = await supabase
