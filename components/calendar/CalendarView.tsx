@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, Plus, X, Search, Flag } from "lucide-react";
 import {
   addDays,
   addMonths,
@@ -20,7 +21,12 @@ import {
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AppointmentModal } from "./AppointmentModal";
-import type { Appointment, AppointmentKind, Customer, Case } from "@/types/database.types";
+import type {
+  Appointment,
+  AppointmentKind,
+  Customer,
+  Case,
+} from "@/types/database.types";
 
 const KIND_LABELS: Record<AppointmentKind, string> = {
   accettazione: "Accettazione",
@@ -38,19 +44,31 @@ const KIND_COLORS: Record<AppointmentKind, string> = {
   altro: "bg-bg-hover text-text-muted border-border",
 };
 
+export interface CaseDeadline {
+  id: string;
+  due_at: string; // YYYY-MM-DD
+  customerName: string;
+  plate: string | null;
+}
+
 interface Props {
   initialAppointments: Appointment[];
   customers: Pick<Customer, "id" | "full_name">[];
   cases: Pick<Case, "id" | "customer_id">[];
+  caseDeadlines: CaseDeadline[];
 }
 
-export function CalendarView({ initialAppointments, customers, cases }: Props) {
+export function CalendarView({
+  initialAppointments,
+  customers,
+  cases,
+  caseDeadlines,
+}: Props) {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [cursor, setCursor] = useState<Date>(new Date());
   const [modal, setModal] = useState<
-    { mode: "edit"; appointment: Appointment }
-    | { mode: "new"; date: string }
-    | null
+    { mode: "edit"; appointment: Appointment } | { mode: "new"; date: string } | null
   >(null);
   const [dayPanelDate, setDayPanelDate] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -103,12 +121,30 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
     }
     for (const list of map.values()) {
       list.sort(
-        (a, b) =>
-          new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+        (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
       );
     }
     return map;
   }, [filteredAppointments]);
+
+  // Scadenze pratiche raggruppate per giorno (filtra anche per ricerca su cliente/targa).
+  const deadlinesByDay = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? caseDeadlines.filter(
+          (d) =>
+            d.customerName.toLowerCase().includes(q) ||
+            (d.plate ?? "").toLowerCase().includes(q)
+        )
+      : caseDeadlines;
+    const map = new Map<string, CaseDeadline[]>();
+    for (const d of filtered) {
+      const list = map.get(d.due_at) ?? [];
+      list.push(d);
+      map.set(d.due_at, list);
+    }
+    return map;
+  }, [caseDeadlines, search]);
 
   function onSaved(a: Appointment) {
     setAppointments((prev) => {
@@ -243,10 +279,16 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
           {days.map((day) => {
             const key = format(day, "yyyy-MM-dd");
             const apts = byDay.get(key) ?? [];
+            const deadlines = deadlinesByDay.get(key) ?? [];
             const inMonth = isSameMonth(day, cursor);
             const isToday = isSameDay(day, today);
+            const totalItems = apts.length + deadlines.length;
 
             const maxVisible = view === "week" ? 12 : 3;
+            const deadlinesToShow = deadlines.slice(0, maxVisible);
+            const aptsBudget = Math.max(0, maxVisible - deadlinesToShow.length);
+            const aptsToShow = apts.slice(0, aptsBudget);
+            const hiddenCount = totalItems - deadlinesToShow.length - aptsToShow.length;
             return (
               <div
                 key={key}
@@ -270,14 +312,33 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
                       ? format(day, "d MMM", { locale: it })
                       : format(day, "d")}
                   </span>
-                  {apts.length > 0 && (
+                  {totalItems > 0 && (
                     <span className="text-[9px] text-text-subtle tabular-nums">
-                      {apts.length}
+                      {totalItems}
                     </span>
                   )}
                 </div>
                 <div className="space-y-1 overflow-hidden">
-                  {apts.slice(0, maxVisible).map((a) => (
+                  {/* Scadenze pratiche (consegna): vanno in cima */}
+                  {deadlinesToShow.map((d) => (
+                    <button
+                      key={`d-${d.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/cases/${d.id}`);
+                      }}
+                      className="w-full text-left text-[10px] px-1.5 py-0.5 rounded border truncate bg-amber-500/15 text-amber-300 border-amber-500/40 flex items-center gap-1"
+                      title={`Consegna pratica: ${d.customerName}${d.plate ? ` (${d.plate})` : ""}`}
+                      type="button"
+                    >
+                      <Flag className="w-2.5 h-2.5 shrink-0" />
+                      <span className="truncate">
+                        {d.plate ? `${d.plate} · ` : ""}
+                        {d.customerName}
+                      </span>
+                    </button>
+                  ))}
+                  {aptsToShow.map((a) => (
                     <button
                       key={a.id}
                       onClick={(e) => {
@@ -294,7 +355,7 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
                       {format(new Date(a.starts_at), "HH:mm")} {a.title}
                     </button>
                   ))}
-                  {apts.length > maxVisible && (
+                  {hiddenCount > 0 && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -303,7 +364,7 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
                       className="text-[10px] text-accent hover:underline pl-1 text-left"
                       type="button"
                     >
-                      +{apts.length - maxVisible} altri →
+                      +{hiddenCount} altri →
                     </button>
                   )}
                 </div>
@@ -329,10 +390,15 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
         <DayPanel
           date={dayPanelDate}
           appointments={byDay.get(dayPanelDate) ?? []}
+          deadlines={deadlinesByDay.get(dayPanelDate) ?? []}
           onClose={() => setDayPanelDate(null)}
           onEdit={(a) => {
             setDayPanelDate(null);
             setModal({ mode: "edit", appointment: a });
+          }}
+          onOpenCase={(id) => {
+            setDayPanelDate(null);
+            router.push(`/cases/${id}`);
           }}
           onNew={() => {
             setModal({ mode: "new", date: dayPanelDate });
@@ -347,14 +413,18 @@ export function CalendarView({ initialAppointments, customers, cases }: Props) {
 function DayPanel({
   date,
   appointments,
+  deadlines,
   onClose,
   onEdit,
+  onOpenCase,
   onNew,
 }: {
   date: string;
   appointments: Appointment[];
+  deadlines: CaseDeadline[];
   onClose: () => void;
   onEdit: (a: Appointment) => void;
+  onOpenCase: (id: string) => void;
   onNew: () => void;
 }) {
   const dateObj = new Date(date + "T00:00:00");
@@ -367,9 +437,7 @@ function DayPanel({
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside
-        className="fixed top-0 right-0 h-screen w-full sm:w-96 bg-bg-card border-l border-border z-50 flex flex-col shadow-xl animate-slide-in-right"
-      >
+      <aside className="fixed top-0 right-0 h-screen w-full sm:w-96 bg-bg-card border-l border-border z-50 flex flex-col shadow-xl animate-slide-in-right">
         <div className="px-5 h-16 flex items-center justify-between border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-wide text-text-subtle">
@@ -388,7 +456,32 @@ function DayPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {appointments.length === 0 ? (
+          {deadlines.length > 0 && (
+            <div className="space-y-2 pb-2 border-b border-border">
+              <div className="text-[10px] uppercase tracking-wide text-text-subtle px-1">
+                Scadenze pratiche
+              </div>
+              {deadlines.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => onOpenCase(d.id)}
+                  className="w-full text-left p-3 rounded-md border transition-colors hover:bg-bg-hover bg-amber-500/15 text-amber-200 border-amber-500/40"
+                  type="button"
+                >
+                  <div className="flex items-center gap-2">
+                    <Flag className="w-3.5 h-3.5 shrink-0" />
+                    <div className="text-sm font-medium truncate">{d.customerName}</div>
+                  </div>
+                  {d.plate && (
+                    <div className="text-xs text-amber-300/80 mt-1 tabular-nums">
+                      Targa: {d.plate}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {appointments.length === 0 && deadlines.length === 0 ? (
             <div className="text-center text-xs text-text-subtle py-8">
               Nessun appuntamento.
             </div>

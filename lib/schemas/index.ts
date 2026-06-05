@@ -109,11 +109,22 @@ export const caseStatusEnum = z.enum([
   "liquidato",
 ]);
 
-export const caseFormSchema = z.object({
-  status: caseStatusEnum,
-  price: numericString.nullable(),
-  description: trimmedOrNull.nullable(),
-});
+const dateRequired = z
+  .string()
+  .refine((s) => /^\d{4}-\d{2}-\d{2}$/.test(s), "Data obbligatoria");
+
+export const caseFormSchema = z
+  .object({
+    status: caseStatusEnum,
+    price: numericString.nullable(),
+    description: trimmedOrNull.nullable(),
+    started_at: dateRequired,
+    due_at: dateRequired,
+  })
+  .refine((v) => v.due_at >= v.started_at, {
+    message: "La scadenza non può precedere l'inizio",
+    path: ["due_at"],
+  });
 
 export type CaseFormValues = z.infer<typeof caseFormSchema>;
 
@@ -121,6 +132,8 @@ export type CaseFormInputValues = {
   status: z.infer<typeof caseStatusEnum>;
   description: string | null;
   price: string;
+  started_at: string;
+  due_at: string;
 };
 
 // ============================================================

@@ -18,6 +18,7 @@ import { CustomerPanel, type CustomerOption } from "./case/CustomerPanel";
 import { VehiclePanel } from "./case/VehiclePanel";
 import { CasePanel } from "./case/CasePanel";
 import { DocumentPanel } from "./case/DocumentPanel";
+import { CasePartsPanel } from "./case/CasePartsPanel";
 import { InvoicesPanel } from "./case/InvoicesPanel";
 import { NotifyButton } from "./case/NotifyButton";
 import { NotifyWhatsAppButton } from "./case/NotifyWhatsAppButton";
@@ -27,6 +28,7 @@ import { useConfirm } from "./ConfirmDialog";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useUnsavedChangesWarning";
 import type {
   Case,
+  CasePart,
   CaseStatus,
   Customer,
   Document,
@@ -50,6 +52,7 @@ interface Props {
   initialCustomers: CustomerOption[];
   initialVehicles: Vehicle[];
   initialInvoices: Invoice[];
+  initialParts: CasePart[];
   role: UserRole;
   isAdmin: boolean;
   workshopName: string | null;
@@ -63,6 +66,7 @@ export function CaseDetail({
   initialCustomers,
   initialVehicles,
   initialInvoices,
+  initialParts,
   role,
   isAdmin,
   workshopName,
@@ -120,6 +124,8 @@ export function CaseDetail({
     status: initialCase.status,
     description: initialCase.description ?? null,
     price: initialCase.price?.toString() ?? "",
+    started_at: initialCase.started_at,
+    due_at: initialCase.due_at,
   });
 
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -198,6 +204,8 @@ export function CaseDetail({
           status: caseResult.data.status,
           description: caseResult.data.description,
           price: caseResult.data.price,
+          started_at: caseResult.data.started_at,
+          due_at: caseResult.data.due_at,
           customer_id: selectedCustomerId,
           vehicle_id: selectedVehicleId,
         })
@@ -395,6 +403,8 @@ export function CaseDetail({
             status: errors["case.status"],
             description: errors["case.description"],
             price: errors["case.price"],
+            started_at: errors["case.started_at"],
+            due_at: errors["case.due_at"],
           }}
           onChange={(patch) => {
             setCaseForm((f) => ({ ...f, ...patch }));
@@ -402,6 +412,10 @@ export function CaseDetail({
             for (const k of Object.keys(patch) as string[]) clearError(`case.${k}`);
           }}
         />
+      </div>
+
+      <div className="card p-5 mb-5">
+        <CasePartsPanel caseId={caseData.id} initialParts={initialParts} role={role} />
       </div>
 
       <div className="card p-5 mb-5">

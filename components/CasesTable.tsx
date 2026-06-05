@@ -478,10 +478,19 @@ function NewCaseModal({
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
 
+  const today = new Date();
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  const dueDefault = new Date();
+  dueDefault.setDate(dueDefault.getDate() + 30);
   const [caseForm, setCaseForm] = useState({
     status: "preparazione" as CaseStatus,
     description: null as string | null,
     price: "",
+    started_at: ymd(today),
+    due_at: ymd(dueDefault),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -583,6 +592,8 @@ function NewCaseModal({
           status: caseResult.data.status,
           description: caseResult.data.description,
           price: caseResult.data.price,
+          started_at: caseResult.data.started_at,
+          due_at: caseResult.data.due_at,
         })
         .select()
         .single();
@@ -705,6 +716,8 @@ function NewCaseModal({
               status: errors["case.status"],
               description: errors["case.description"],
               price: errors["case.price"],
+              started_at: errors["case.started_at"],
+              due_at: errors["case.due_at"],
             }}
             onChange={(patch) => {
               setCaseForm((c) => ({ ...c, ...patch }));

@@ -121,6 +121,50 @@ export type Database = {
           },
         ];
       };
+      case_parts: {
+        Row: {
+          id: string;
+          case_id: string;
+          workshop_id: string;
+          name: string;
+          quantity: number;
+          checked_at: string | null;
+          checked_by: string | null;
+          owner_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          case_id: string;
+          workshop_id?: string;
+          name: string;
+          quantity?: number;
+          checked_at?: string | null;
+          checked_by?: string | null;
+          owner_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          case_id?: string;
+          workshop_id?: string;
+          name?: string;
+          quantity?: number;
+          checked_at?: string | null;
+          checked_by?: string | null;
+          owner_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "case_parts_case_id_fkey";
+            columns: ["case_id"];
+            isOneToOne: false;
+            referencedRelation: "cases";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cases: {
         Row: {
           archived_at: string | null;
@@ -128,6 +172,7 @@ export type Database = {
           created_at: string;
           customer_id: string;
           description: string | null;
+          due_at: string;
           finitura_done_at: string | null;
           finitura_done_by: string | null;
           id: string;
@@ -136,6 +181,7 @@ export type Database = {
           preparazione_done_at: string | null;
           preparazione_done_by: string | null;
           price: number | null;
+          started_at: string;
           status: Database["public"]["Enums"]["case_status"];
           updated_at: string;
           vehicle_id: string | null;
@@ -149,6 +195,7 @@ export type Database = {
           created_at?: string;
           customer_id: string;
           description?: string | null;
+          due_at?: string;
           finitura_done_at?: string | null;
           finitura_done_by?: string | null;
           id?: string;
@@ -157,6 +204,7 @@ export type Database = {
           preparazione_done_at?: string | null;
           preparazione_done_by?: string | null;
           price?: number | null;
+          started_at?: string;
           status?: Database["public"]["Enums"]["case_status"];
           updated_at?: string;
           vehicle_id?: string | null;
@@ -170,6 +218,7 @@ export type Database = {
           created_at?: string;
           customer_id?: string;
           description?: string | null;
+          due_at?: string;
           finitura_done_at?: string | null;
           finitura_done_by?: string | null;
           id?: string;
@@ -178,6 +227,7 @@ export type Database = {
           preparazione_done_at?: string | null;
           preparazione_done_by?: string | null;
           price?: number | null;
+          started_at?: string;
           status?: Database["public"]["Enums"]["case_status"];
           updated_at?: string;
           vehicle_id?: string | null;
@@ -1140,6 +1190,8 @@ export type Database = {
           p_color?: string | null;
           p_vin?: string | null;
           p_notes?: string | null;
+          p_started_at?: string | null;
+          p_due_at?: string | null;
         };
         Returns: string;
       };
@@ -1389,8 +1441,11 @@ export type CaseInsert = Database["public"]["Tables"]["cases"]["Insert"];
 export type CaseUpdate = Database["public"]["Tables"]["cases"]["Update"];
 export type CaseStatus = Database["public"]["Enums"]["case_status"];
 
+export type CasePart = Database["public"]["Tables"]["case_parts"]["Row"];
+export type CasePartInsert = Database["public"]["Tables"]["case_parts"]["Insert"];
+
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
-export type DocumentPhase = "preparazione" | "verniciatura" | "finitura";
+export type DocumentPhase = "ingresso" | "preparazione" | "verniciatura" | "finitura";
 export type Note = Database["public"]["Tables"]["notes"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];

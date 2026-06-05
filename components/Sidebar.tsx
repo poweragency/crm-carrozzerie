@@ -32,10 +32,12 @@ const baseNav = [
   { href: "/calendar", label: "Calendario", icon: Calendar },
 ];
 
-// I dipendenti con mansione vedono la loro coda pratiche + l'anagrafica clienti.
+// I dipendenti con mansione vedono la loro coda pratiche, l'anagrafica clienti
+// e il calendario consegne (read-only sulle pratiche in scadenza).
 const employeeNav = [
   { href: "/cases", label: "Le mie pratiche", icon: FolderKanban },
   { href: "/customers", label: "Clienti", icon: Users },
+  { href: "/calendar", label: "Calendario", icon: Calendar },
 ];
 
 interface Props {

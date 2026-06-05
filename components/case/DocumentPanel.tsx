@@ -19,6 +19,7 @@ interface Props {
 }
 
 const PHASES: { key: DocumentPhase; label: string }[] = [
+  { key: "ingresso", label: "Fotografia all'Ingresso" },
   { key: "preparazione", label: "Fotografia Post Preparazione" },
   { key: "verniciatura", label: "Fotografia Post Verniciatura" },
   { key: "finitura", label: "Fotografia Post Finitura" },
@@ -47,6 +48,7 @@ export function DocumentPanel({ caseId, documents, onChange, phases }: Props) {
   const photos = useMemo(() => documents.filter(isImage), [documents]);
   const photosByPhase = useMemo(() => {
     const map: Record<DocumentPhase, Document[]> = {
+      ingresso: [],
       preparazione: [],
       verniciatura: [],
       finitura: [],

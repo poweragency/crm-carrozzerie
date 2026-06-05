@@ -36,6 +36,19 @@ export function LeadToCustomerModal({ lead, onCancel, onConverted }: Props) {
   const [errors, setErrors] = useState<
     Partial<Record<keyof VehicleFormInputValues, string>>
   >({});
+  // Date pratica: inizio default oggi, scadenza default +30g (entrambe obbligatorie)
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  const today = new Date();
+  const due30 = new Date();
+  due30.setDate(due30.getDate() + 30);
+  const [startedAt, setStartedAt] = useState(ymd(today));
+  const [dueAt, setDueAt] = useState(ymd(due30));
+  const [dateErrors, setDateErrors] = useState<{ started_at?: string; due_at?: string }>(
+    {}
+  );
   const [saving, setSaving] = useState(false);
 
   const dirty = useMemo(
@@ -99,6 +112,17 @@ export function LeadToCustomerModal({ lead, onCancel, onConverted }: Props) {
       toast.error("Targa, marca e modello sono obbligatori");
       return;
     }
+    // Validazione date pratica.
+    const dErr: { started_at?: string; due_at?: string } = {};
+    if (!startedAt) dErr.started_at = "Data inizio obbligatoria";
+    if (!dueAt) dErr.due_at = "Data scadenza obbligatoria";
+    if (startedAt && dueAt && dueAt < startedAt)
+      dErr.due_at = "La scadenza non può precedere l'inizio";
+    if (dErr.started_at || dErr.due_at) {
+      setDateErrors(dErr);
+      toast.error("Controlla le date della pratica");
+      return;
+    }
 
     setSaving(true);
     const { error } = await supabase.rpc("convert_lead_to_vehicle_customer", {
@@ -110,6 +134,8 @@ export function LeadToCustomerModal({ lead, onCancel, onConverted }: Props) {
       p_color: result.data.color,
       p_vin: result.data.vin,
       p_notes: result.data.notes,
+      p_started_at: startedAt,
+      p_due_at: dueAt,
     });
     if (error) {
       setSaving(false);
@@ -157,6 +183,39 @@ export function LeadToCustomerModal({ lead, onCancel, onConverted }: Props) {
         </div>
 
         <div className="p-5 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Data inizio *"
+              htmlFor="lc-started-at"
+              error={dateErrors.started_at}
+            >
+              <input
+                id="lc-started-at"
+                type="date"
+                value={startedAt}
+                onChange={(e) => {
+                  setStartedAt(e.target.value);
+                  setDateErrors((d) => ({ ...d, started_at: undefined }));
+                }}
+                className="input-base"
+                required
+              />
+            </Field>
+            <Field label="Data scadenza *" htmlFor="lc-due-at" error={dateErrors.due_at}>
+              <input
+                id="lc-due-at"
+                type="date"
+                value={dueAt}
+                min={startedAt || undefined}
+                onChange={(e) => {
+                  setDueAt(e.target.value);
+                  setDateErrors((d) => ({ ...d, due_at: undefined }));
+                }}
+                className="input-base"
+                required
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Targa *" htmlFor="lc-plate" error={errors.plate}>
               <input

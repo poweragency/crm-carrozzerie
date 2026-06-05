@@ -50,11 +50,13 @@ export async function updateSession(request: NextRequest) {
 
   // Gating dipendenti: le mansioni (preparatore/verniciatore/finitore) possono
   // accedere alla coda pratiche (/cases), all'anagrafica clienti (/customers,
-  // tranne l'import massivo riservato all'owner) e alle API. Ogni altra pagina
-  // app viene reindirizzata a /cases. Interroghiamo il ruolo solo quando serve
-  // (path potenzialmente ristretto) per non gravare su ogni richiesta.
+  // tranne l'import massivo riservato all'owner), al calendario (/calendar) e
+  // alle API. Ogni altra pagina app viene reindirizzata a /cases. Interroghiamo
+  // il ruolo solo quando serve (path potenzialmente ristretto) per non gravare
+  // su ogni richiesta.
   const employeeAllowed =
     pathname.startsWith("/cases") ||
+    pathname.startsWith("/calendar") ||
     pathname.startsWith("/api") ||
     (pathname.startsWith("/customers") && !pathname.startsWith("/customers/importa"));
   if (user && !isPublic && !employeeAllowed) {

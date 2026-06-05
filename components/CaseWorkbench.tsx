@@ -8,6 +8,7 @@ import { Breadcrumb } from "./ui/Breadcrumb";
 import { createClient } from "@/lib/supabase/client";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { DocumentPanel } from "./case/DocumentPanel";
+import { CasePartsPanel } from "./case/CasePartsPanel";
 import {
   CASE_PRODUCTION_STATUSES,
   CASE_STATUS_LABELS,
@@ -17,6 +18,7 @@ import { PHASE_DONE_FIELDS, nextPhase, rolePhase } from "@/lib/roles";
 import { cn, formatDateTime } from "@/lib/utils";
 import type {
   Case,
+  CasePart,
   Document,
   DocumentPhase,
   UserRole,
@@ -35,11 +37,18 @@ type CaseWithCustomer = Case & {
 interface Props {
   initialCase: CaseWithCustomer;
   initialDocuments: Document[];
+  initialParts: CasePart[];
   vehicle: Vehicle | null;
   role: UserRole;
 }
 
-export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: Props) {
+export function CaseWorkbench({
+  initialCase,
+  initialDocuments,
+  initialParts,
+  vehicle,
+  role,
+}: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
@@ -51,7 +60,7 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
   const [undoLeft, setUndoLeft] = useState(30);
   const [undoing, setUndoing] = useState(false);
 
-  const myPhase = rolePhase(role) as DocumentPhase | null;
+  const myPhase = rolePhase(role);
   const customer = caseData.customers;
   const status = caseData.status;
   const isMyPhase = myPhase != null && status === myPhase;
@@ -66,6 +75,17 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
   );
   const hasPhoto = photosForMyPhase.length > 0;
 
+  // Il preparatore deve caricare anche la foto all'ingresso prima di avanzare.
+  const isPreparatore = myPhase === "preparazione";
+  const hasEntryPhoto = useMemo(
+    () =>
+      documents.some(
+        (d) => d.phase === "ingresso" && (d.mime_type?.startsWith("image/") ?? false)
+      ),
+    [documents]
+  );
+  const canAdvance = hasPhoto && (!isPreparatore || hasEntryPhoto);
+
   async function handleAdvance() {
     if (!myPhase || !next) return;
     if (!hasPhoto) {
@@ -73,6 +93,12 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
         description: `Serve almeno una foto della fase ${CASE_STATUS_LABELS[
           myPhase
         ].toLowerCase()} completata per poter avanzare.`,
+      });
+      return;
+    }
+    if (isPreparatore && !hasEntryPhoto) {
+      toast.error("Foto all'ingresso mancante", {
+        description: "Carica la foto della vettura all'ingresso prima di avanzare.",
       });
       return;
     }
@@ -85,13 +111,17 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
     setAdvancing(false);
     if (error) {
       const m = error.message;
-      const msg = m.includes("photo_required")
-        ? "Carica almeno una foto della fase prima di avanzare."
-        : m.includes("forbidden_phase")
-          ? "Questa pratica non è (più) nella tua fase."
-          : m.includes("not_advanceable")
-            ? "Questa pratica non può essere avanzata."
-            : m;
+      const msg = m.includes("entry_photo_required")
+        ? "Carica la foto all'ingresso prima di avanzare."
+        : m.includes("parts_unchecked")
+          ? "Spunta tutti i ricambi prima di passare la pratica al titolare."
+          : m.includes("photo_required")
+            ? "Carica almeno una foto della fase prima di avanzare."
+            : m.includes("forbidden_phase")
+              ? "Questa pratica non è (più) nella tua fase."
+              : m.includes("not_advanceable")
+                ? "Questa pratica non può essere avanzata."
+                : m;
       toast.error("Passaggio non riuscito", { description: msg });
       return;
     }
@@ -257,6 +287,13 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
         </ol>
       </div>
 
+      {/* Ricambi (visibili a tutta la squadra che ha accesso alla pratica) */}
+      {isMyPhase && (
+        <div className="card p-5 mb-5">
+          <CasePartsPanel caseId={caseData.id} initialParts={initialParts} role={role} />
+        </div>
+      )}
+
       {/* Foto della propria fase */}
       {isMyPhase && myPhase ? (
         <div className="card p-5 mb-5">
@@ -264,7 +301,11 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
             caseId={caseData.id}
             documents={documents}
             onChange={setDocuments}
-            phases={[myPhase]}
+            phases={
+              isPreparatore
+                ? (["ingresso", myPhase] as DocumentPhase[])
+                : ([myPhase] as DocumentPhase[])
+            }
           />
         </div>
       ) : (
@@ -297,21 +338,31 @@ export function CaseWorkbench({ initialCase, initialDocuments, vehicle, role }: 
             ) : (
               <>
                 <span className="text-xs">
-                  {hasPhoto ? (
+                  {canAdvance ? (
                     <span className="text-emerald-400">✓ Foto caricata</span>
+                  ) : isPreparatore && !hasEntryPhoto && !hasPhoto ? (
+                    <span className="text-yellow-400">
+                      ● Carica foto ingresso e foto preparazione
+                    </span>
+                  ) : isPreparatore && !hasEntryPhoto ? (
+                    <span className="text-yellow-400">
+                      ● Carica la foto all&apos;ingresso
+                    </span>
                   ) : (
                     <span className="text-yellow-400">● Carica la foto per avanzare</span>
                   )}
                 </span>
                 <button
                   onClick={handleAdvance}
-                  disabled={advancing || !hasPhoto}
+                  disabled={advancing || !canAdvance}
                   className="btn-primary"
                   type="button"
                   title={
-                    hasPhoto
+                    canAdvance
                       ? undefined
-                      : "Carica almeno una foto della fase prima di avanzare"
+                      : isPreparatore && !hasEntryPhoto
+                        ? "Carica la foto all'ingresso e la foto della preparazione"
+                        : "Carica almeno una foto della fase prima di avanzare"
                   }
                 >
                   <ArrowRight className="w-4 h-4" />

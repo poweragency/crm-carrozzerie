@@ -33,6 +33,7 @@ export default async function CaseDetailPage({ params }: Props) {
     { data: customers },
     { data: vehicles },
     { data: invoices },
+    { data: parts },
     { data: profile },
   ] = await Promise.all([
     supabase
@@ -50,6 +51,11 @@ export default async function CaseDetailPage({ params }: Props) {
       .select("*")
       .eq("case_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("case_parts")
+      .select("*")
+      .eq("case_id", id)
+      .order("created_at", { ascending: true }),
     user
       ? supabase
           .from("profiles")
@@ -70,6 +76,7 @@ export default async function CaseDetailPage({ params }: Props) {
       <CaseWorkbench
         initialCase={caseData}
         initialDocuments={documents ?? []}
+        initialParts={parts ?? []}
         vehicle={vehicle}
         role={role}
       />
@@ -90,6 +97,7 @@ export default async function CaseDetailPage({ params }: Props) {
       initialCustomers={customers ?? []}
       initialVehicles={vehicles ?? []}
       initialInvoices={invoices ?? []}
+      initialParts={parts ?? []}
       role={role}
       isAdmin={isAdmin}
       workshopName={workshopName}
