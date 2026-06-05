@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/AppShell";
 import { CommandPaletteProvider } from "@/components/CommandPalette";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
+import { SaveAccountBanner } from "@/components/auth/SaveAccountBanner";
+import { readSavedAccounts } from "@/lib/auth/saved-accounts";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -29,9 +31,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isAdmin = user.app_metadata?.is_admin === true;
   const role = profile?.role ?? "owner";
 
+  // Banner "Salva utente" mostrato solo se l'account corrente non è già nei
+  // saved accounts di questo dispositivo (il client lo nasconde anche se
+  // l'utente l'ha rifiutato in precedenza via localStorage).
+  const savedAccounts = await readSavedAccounts();
+  const alreadySaved = savedAccounts.some((a) => a.id === user.id);
+
   return (
     <CommandPaletteProvider>
       <GlobalShortcuts />
+      {!alreadySaved && <SaveAccountBanner userId={user.id} />}
       <AppShell
         userId={user.id}
         userEmail={user.email ?? ""}
