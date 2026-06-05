@@ -31,11 +31,16 @@ export function SavedAccountsList({ accounts }: Props) {
           startTransition(() => router.refresh());
           return;
         }
-        toast.error("Switch non riuscito", { description: json.error ?? "" });
+        toast.error("Switch non riuscito", {
+          description: `${res.status}: ${json.error ?? "errore sconosciuto"}`,
+        });
         return;
       }
-      router.push(json.redirect ?? "/dashboard");
-      router.refresh();
+      // Hard reload: assicura che la richiesta successiva includa i Set-Cookie
+      // appena scritti dalla response. router.push (RSC fetch) puo' partire
+      // prima che il browser abbia committato i cookie, mandandoci di nuovo
+      // su /login per assenza di sessione.
+      window.location.href = json.redirect ?? "/dashboard";
     } finally {
       setSwitchingId(null);
     }
