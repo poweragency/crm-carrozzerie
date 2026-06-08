@@ -1,0 +1,142 @@
+import type { Metadata } from "next";
+import { LegalShell, COMPANY } from "@/components/legal/LegalShell";
+
+export const metadata: Metadata = {
+  title: "Termini di Servizio — CRM Officina",
+  description: "Condizioni d'uso del servizio CRM Officina.",
+};
+
+export default function TerminiPage() {
+  return (
+    <LegalShell
+      title="Termini di Servizio"
+      updated="giugno 2026"
+      sections={[
+        {
+          heading: "1. Fornitore del servizio",
+          body: [
+            <>
+              CRM Officina è un servizio software in abbonamento (SaaS) fornito da{" "}
+              {COMPANY.identifier}. Regime forfettario: operazioni non soggette a IVA ai
+              sensi dell’art. 1, commi 54-89, L. 190/2014. Creando un account o
+              utilizzando il servizio l’utente accetta i presenti Termini.
+            </>,
+          ],
+        },
+        {
+          heading: "2. Oggetto",
+          body: [
+            <>
+              CRM Officina è una piattaforma multi-tenant per la gestione di lead,
+              clienti, pratiche di lavorazione, preventivi e documenti per carrozzerie e
+              officine. Il servizio è fornito “così com’è”, con possibili evoluzioni delle
+              funzionalità.
+            </>,
+          ],
+        },
+        {
+          heading: "3. Account e responsabilità del cliente",
+          body: [
+            <>
+              Il cliente (officina) è responsabile della riservatezza delle credenziali,
+              della gestione dei propri utenti e dei dati inseriti nella piattaforma.
+              Garantisce di avere idonea base giuridica per trattare i dati dei propri
+              clienti e di rispettare la normativa applicabile, agendo quale titolare del
+              trattamento di tali dati.
+            </>,
+          ],
+        },
+        {
+          heading: "4. Uso consentito",
+          body: [
+            <>
+              È vietato utilizzare il servizio per finalità illecite, violare diritti di
+              terzi, compromettere la sicurezza della piattaforma o
+              rivendere/sublicenziare l’accesso senza autorizzazione scritta.
+            </>,
+          ],
+        },
+        {
+          heading: "5. Piani e pagamenti",
+          body: [
+            <>
+              L’accesso richiede un abbonamento secondo il piano attivato. Prezzi, quote e
+              condizioni sono comunicati al momento dell’attivazione. Salvo diversa
+              indicazione, gli abbonamenti si rinnovano periodicamente e sono disdicibili
+              secondo quanto previsto dal piano.
+            </>,
+          ],
+        },
+        {
+          heading: "6. Trattamento dei dati (DPA)",
+          body: [
+            <>
+              In relazione ai dati dei clienti finali inseriti dall’officina, il Fornitore
+              agisce quale responsabile del trattamento e tratta i dati secondo le
+              istruzioni del cliente titolare, come descritto nella{" "}
+              <a className="text-accent underline" href="/privacy">
+                Privacy Policy
+              </a>
+              , che costituisce parte integrante dei presenti Termini.
+            </>,
+          ],
+        },
+        {
+          heading: "7. Proprietà intellettuale",
+          body: [
+            <>
+              Il software, il marchio e i materiali della piattaforma sono di proprietà di{" "}
+              {COMPANY.legalName} (Power Agency) o dei suoi licenzianti. Al cliente è
+              concessa una licenza d’uso non esclusiva e non trasferibile per la durata
+              dell’abbonamento. I dati inseriti dal cliente restano di sua titolarità.
+            </>,
+          ],
+        },
+        {
+          heading: "8. Limitazione di responsabilità",
+          body: [
+            <>
+              Nei limiti di legge, il Fornitore non è responsabile per danni indiretti o
+              consequenziali, né per interruzioni o malfunzionamenti temporanei del
+              servizio o dei fornitori terzi. Il cliente è tenuto a conservare copie dei
+              documenti critici.
+            </>,
+          ],
+        },
+        {
+          heading: "9. Sospensione e cessazione",
+          body: [
+            <>
+              Il Fornitore può sospendere o chiudere un account in caso di violazione dei
+              presenti Termini o di mancato pagamento. Il cliente può cessare l’uso del
+              servizio in qualsiasi momento. Alla cessazione i dati sono trattati come
+              indicato nella Privacy Policy.
+            </>,
+          ],
+        },
+        {
+          heading: "10. Legge applicabile e foro competente",
+          body: [
+            <>
+              I presenti Termini sono regolati dalla legge italiana. Per le controversie è
+              competente in via esclusiva il Foro di Milano, salvo i fori inderogabili a
+              tutela del consumatore.
+            </>,
+          ],
+        },
+        {
+          heading: "11. Contatti",
+          body: [
+            <>
+              Per qualsiasi domanda scrivere a{" "}
+              <a className="text-accent underline" href={`mailto:${COMPANY.email}`}>
+                {COMPANY.email}
+              </a>{" "}
+              — PEC {COMPANY.pec}.
+            </>,
+          ],
+        },
+      ]}
+    />
+  );
+}

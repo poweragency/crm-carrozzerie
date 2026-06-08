@@ -42,6 +42,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/termini") ||
+    pathname.startsWith("/cookie") ||
     pathname.startsWith("/api/webhooks");
 
   if (!user && !isPublic) {
