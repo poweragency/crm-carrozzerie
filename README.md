@@ -203,10 +203,10 @@ Vedi la guida passo-passo nella sezione **Impostazioni → Collegamento Facebook
 1. Trova l'ID Pagina FB
 2. Genera un Page Access Token (permessi `leads_retrieval`, `pages_manage_metadata`)
 3. Incolla i 2 valori nelle Impostazioni del CRM
-4. Su Meta for Developers (app **PowerCar**) → Webhooks → URL `https://powercar.poweragency.it/api/webhooks/facebook`, Verify Token = `profile.fb_verify_token` (lo trovi nelle Impostazioni)
+4. Su Meta for Developers (app **PowerCar**) → Webhooks → URL `https://powercar.poweragency.it/api/webhooks/facebook`, Verify Token = `workshops.fb_verify_token` (lo trovi nelle Impostazioni)
 5. Subscribe `leadgen`
 
-Il webhook usa `service_role` per scrivere e identifica il tenant via `fb_page_id` su `profiles`.
+Il webhook usa `service_role` per scrivere e identifica il tenant via `fb_page_id` su `workshops`.
 
 ---
 
