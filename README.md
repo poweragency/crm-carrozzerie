@@ -21,7 +21,9 @@ CRM multi-tenant per officine/carrozzerie. Gestione lead da Facebook Ads → Kan
 
 ## Modello multi-tenant
 
-**Una carrozzeria = un account utente.** Ogni tabella business ha `owner_id` collegato a `auth.users(id)`. Le RLS policies isolano i dati: un utente vede ed edita solo i propri lead, customers, vehicles, cases, documents, notes, appointments, invoices e invoice_items. Il trigger `set_owner_id()` valorizza `owner_id = auth.uid()` automaticamente su tutti gli INSERT, quindi il frontend non deve passarlo esplicitamente.
+**Multi-tenant per _workshop_ (carrozzeria).** Un workshop = una carrozzeria con **più utenti** (1 owner + dipendenti); `profiles` porta `workshop_id` + `role`. Le tabelle business (`leads`, `customers`, `vehicles`, `cases`, `documents`, `notes`, `appointments`, `invoices`, `invoice_items`) hanno **sia `owner_id` (RLS) sia `workshop_id`** (layer team/ruoli). Il trigger `set_owner_id()` valorizza `owner_id = auth.uid()` sugli INSERT (il frontend non lo passa); le RLS isolano i dati per tenant.
+
+> Per i dettagli aggiornati del modello fai fede alle **migrations** in `supabase/migrations/` (e a `CLAUDE.md`), non a questa sezione di overview.
 
 ## Setup
 

@@ -55,17 +55,11 @@ export default async function LoginPage({ searchParams }: Props) {
         </div>
 
         <p className="mt-6 text-center text-xs text-text-subtle">
-          <a href="/privacy" className="hover:text-text">
-            Privacy
-          </a>
+          <a href="/privacy" className="hover:text-text">Privacy</a>
           {" · "}
-          <a href="/cookie" className="hover:text-text">
-            Cookie
-          </a>
+          <a href="/cookie" className="hover:text-text">Cookie</a>
           {" · "}
-          <a href="/termini" className="hover:text-text">
-            Termini
-          </a>
+          <a href="/termini" className="hover:text-text">Termini</a>
         </p>
       </div>
     </div>

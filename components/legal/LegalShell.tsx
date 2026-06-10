@@ -47,10 +47,7 @@ export function LegalShell({
             <section key={s.heading}>
               <h2 className="text-lg font-semibold mb-3">{s.heading}</h2>
               {s.body.map((p, i) => (
-                <div
-                  key={i}
-                  className="text-[0.95rem] leading-relaxed text-text-muted mb-3"
-                >
+                <div key={i} className="text-[0.95rem] leading-relaxed text-text-muted mb-3">
                   {p}
                 </div>
               ))}
@@ -59,21 +56,11 @@ export function LegalShell({
         </div>
 
         <div className="mt-12 pt-6 border-t border-border flex flex-wrap gap-5 text-sm text-text-subtle">
-          <Link href="/privacy" className="hover:text-text">
-            Privacy
-          </Link>
-          <Link href="/cookie" className="hover:text-text">
-            Cookie
-          </Link>
-          <Link href="/termini" className="hover:text-text">
-            Termini
-          </Link>
-          <Link href="/login" className="hover:text-text">
-            Accedi
-          </Link>
-          <span className="ml-auto">
-            © 2026 {COMPANY.tradeName} · P.IVA {COMPANY.vat}
-          </span>
+          <Link href="/privacy" className="hover:text-text">Privacy</Link>
+          <Link href="/cookie" className="hover:text-text">Cookie</Link>
+          <Link href="/termini" className="hover:text-text">Termini</Link>
+          <Link href="/login" className="hover:text-text">Accedi</Link>
+          <span className="ml-auto">© 2026 {COMPANY.tradeName} · P.IVA {COMPANY.vat}</span>
         </div>
       </div>
     </div>
