@@ -52,6 +52,7 @@ Copia `.env.example` in `.env.local` e compila:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Settings → API → `anon`/`publishable` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` (**server only**) |
 | `FB_APP_SECRET` | Meta App → Settings → Basic → App Secret — **obbligatoria**: senza, il webhook FB rifiuta le richieste (fail-closed) |
+| `FB_SYSTEM_USER_TOKEN` | System User token "PowerCar Backend" (BM Poweragency) — **server only**. Abilita il "Collega automaticamente" in /settings; senza, resta solo il collegamento manuale col token |
 | `RESEND_API_KEY` | resend.com → API Keys (opzionale, per inviare email reali) |
 | `RESEND_FROM_EMAIL` | Mittente verificato Resend (es. `Officina <noreply@dominio.it>`) |
 | `UPSTASH_REDIS_REST_URL` | console.upstash.com → DB → REST (opzionale: rate limiting distribuito; senza, fallback in-memory) |
@@ -200,13 +201,20 @@ Bottone "Notifica cliente" nella pratica invia un'email con il messaggio del tem
 
 ## Configurazione Facebook Lead Ads
 
-Vedi la guida passo-passo nella sezione **Impostazioni → Collegamento Facebook Ads** (apre una guida espandibile in 5 step). In breve:
+**Modello operativo:** le pagine FB dei clienti sono asset del **Business Manager Poweragency** → l'app le legge in Standard Access (niente App Review). Onboarding per ogni cliente: vedi **[ONBOARDING-CLIENTE.md](ONBOARDING-CLIENTE.md)**.
 
-1. Trova l'ID Pagina FB
-2. Genera un Page Access Token (permessi `leads_retrieval`, `pages_manage_metadata`)
-3. Incolla i 2 valori nelle Impostazioni del CRM
-4. Su Meta for Developers (app **PowerCar**) → Webhooks → URL `https://powercar.poweragency.it/api/webhooks/facebook`, Verify Token = `workshops.fb_verify_token` (lo trovi nelle Impostazioni)
-5. Subscribe `leadgen`
+### Collegamento automatico (consigliato)
+
+In **Impostazioni → Collegamento Facebook Ads**, una volta portata la pagina nel BM e assegnata al System User (passi 1-2 su Meta), basta:
+
+1. Incollare l'**ID Pagina FB**
+2. Premere **"Collega automaticamente"**
+
+Il server (`/api/fb/connect-page`, owner-only) usa `FB_SYSTEM_USER_TOKEN` per generare il page token, iscrivere la pagina al campo `leadgen` e salvarla sul workshop. Se la pagina non è ancora assegnata al System User, restituisce un messaggio chiaro.
+
+### Collegamento manuale (fallback)
+
+Se l'automatico non è disponibile, restano i campi manuali (guida espandibile in 5 step nella stessa sezione): ID Pagina + Page Access Token (`leads_retrieval`, `pages_manage_metadata`) incollati a mano, poi su Meta for Developers (app **PowerCar**) → Webhooks → URL `https://powercar.poweragency.it/api/webhooks/facebook`, Verify Token = `workshops.fb_verify_token`, Subscribe `leadgen`.
 
 Il webhook usa `service_role` per scrivere e identifica il tenant via `fb_page_id` su `workshops`.
 

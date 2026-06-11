@@ -30,18 +30,28 @@ Deve risultare con **controllo completo / di proprietà di Poweragency** (è ci�
 ### 2. Assegna la pagina al System User
 **Business Settings → Utenti di sistema → PowerCar Backend → Aggiungi risorse** → seleziona la **pagina** del cliente → **controllo completo** (+ accesso ai lead).
 
-### 3. Genera il Page Access Token della pagina
-**Graph API Explorer** (developers.facebook.com/tools/explorer):
-- App = **PowerCar**, incolla il **System User token** nel campo "Token d'accesso"
-- `GET /{PAGE_ID}?fields=access_token` → copia il valore `access_token` (è il **Page token**)
+### 3. Collega la pagina (automatico — consigliato)
+Nel CRM, sul workshop del cliente: **/settings → Collegamento Facebook Ads** → incolla
+l'**ID Pagina** → premi **"Collega automaticamente"**.
 
-*(In alternativa via shell, senza Explorer:)*
+Il server (`/api/fb/connect-page`) usa il **System User token** (env `FB_SYSTEM_USER_TOKEN`,
+configurata una-tantum su Vercel) per fare in automatico ciò che prima era manuale:
+genera il Page Access Token, iscrive la pagina al campo `leadgen`, salva `fb_page_id` +
+`fb_page_access_token` sul workshop. A fine va mostra **"✅ Collegata: <nome pagina>"**.
+
+> Se esce un errore tipo *"pagina non assegnata al System User"* → mancano i passi 1-2:
+> completali su Meta e riprova.
+
+<details>
+<summary><strong>Fallback manuale</strong> (se l'automatico non è disponibile)</summary>
+
+**3a. Genera il Page Access Token** — Graph API Explorer (App = PowerCar, incolla il System
+User token), `GET /{PAGE_ID}?fields=access_token`. Oppure via shell:
 ```bash
 curl -sS "https://graph.facebook.com/v21.0/{PAGE_ID}?fields=access_token&access_token={SYSTEM_USER_TOKEN}"
 ```
 
-### 4. Iscrivi la pagina all'app PowerCar
-Con il **Page token** del passo 3:
+**3b. Iscrivi la pagina all'app** con il Page token del passo precedente:
 ```bash
 curl -sS -X POST "https://graph.facebook.com/v21.0/{PAGE_ID}/subscribed_apps" \
   --data-urlencode "subscribed_fields=leadgen" \
@@ -49,15 +59,11 @@ curl -sS -X POST "https://graph.facebook.com/v21.0/{PAGE_ID}/subscribed_apps" \
 # atteso: {"success":true}
 ```
 
-### 5. Salva i dati nel workshop del cliente
-Nel CRM (crm-officina), sul **workshop** del cliente:
-- `fb_page_id` = `{PAGE_ID}`
-- `fb_page_access_token` = `{PAGE_TOKEN}` (campo **write-only** in /settings)
-- `fb_verify_token` = già auto-generato per il workshop
+**3c. Salva nel workshop** via /settings → Collegamento Facebook Ads (campo token write-only):
+`fb_page_id` = `{PAGE_ID}`, `fb_page_access_token` = `{PAGE_TOKEN}` (il `fb_verify_token` è già auto-generato).
+</details>
 
-Via **/settings → Collegamento Facebook Ads** (modo consigliato, write-only).
-
-### 6. Verifica
+### 4. Verifica
 - **Lead Ads Testing Tool** (developers.facebook.com/tools/lead-ads-testing) → pagina del cliente → "Crea contatto" → deve risultare **success** e il lead appare nei `leads` del suo workshop con nome/email/telefono.
 - Oppure attendi il **primo lead reale** dalle sue inserzioni.
 
@@ -66,7 +72,7 @@ Via **/settings → Collegamento Facebook Ads** (modo consigliato, write-only).
 ## Note / gotcha
 
 - **Niente App Review** finché le pagine sono asset del BM Poweragency (Standard Access).
-- Il **System User token** NON va salvato nel CRM: è la "chiave madre", la usi solo per generare i page token. Tienila nel password manager. *(Se in futuro si automatizza l'onboarding, andrebbe come secret di backend, es. `FB_SYSTEM_USER_TOKEN`.)*
+- Il **System User token** NON va salvato nel CRM né mostrato al client: è la "chiave madre". Vive come secret di backend **`FB_SYSTEM_USER_TOKEN`** (Vercel, server-only) per il collegamento automatico, e una copia nel password manager. Lo usi solo per generare i page token.
 - Nel CRM (workshop) ci va **solo il PAGE token**.
 - Rigenerare il System User token **invalida i page token derivati** → andrebbero ri-generati e ri-salvati nei workshop.
 - Il `<test lead: ...>` che vedi nei lead di prova è il dato finto del Testing Tool; i lead veri hanno dati reali.
