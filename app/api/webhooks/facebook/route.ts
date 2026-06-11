@@ -234,6 +234,25 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Lead Ads Testing Tool: i campi arrivano valorizzati come
+      // "<test lead: full_name>", "<test lead: phone_number>", ecc.
+      // Li teniamo (confermano che la pipeline gira end-to-end) ma puliti:
+      // marchiamo il nome come lead di test e azzeriamo i valori fasulli
+      // sugli altri campi, così la card non mostra placeholder Meta.
+      const isTestValue = (v: string | null) =>
+        typeof v === "string" && /^<test lead/i.test(v.trim());
+      const leadIsTest =
+        isTestValue(fullName) ||
+        isTestValue(phone) ||
+        isTestValue(email) ||
+        isTestValue(message);
+      if (leadIsTest) {
+        fullName = "Lead di test (FB)";
+        if (isTestValue(phone)) phone = null;
+        if (isTestValue(email)) email = null;
+        if (isTestValue(message)) message = null;
+      }
+
       const { error } = await supabase.from("leads").insert({
         workshop_id: workshop.id,
         full_name: fullName,
